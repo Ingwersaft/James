@@ -1,0 +1,89 @@
+group = 'com.github.Ingwersaft'
+version '1.0.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.2.0'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'kotlin'
+
+apply plugin: 'application'
+ext.main = 'com.mkring.james.JamesRuntimeKt'
+mainClassName = main
+
+apply plugin: 'maven-publish'
+
+jar {
+    manifest {
+        attributes 'Main-Class': main
+    }
+
+//    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.19.1'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.19.1'
+
+    compile 'me.sargunvohra.lib:pokekotlin:2.3.0'                                   // poke api
+    compile 'org.telegram:telegrambots:3.3'                                         // telegram api
+    compile group: 'it.sauronsoftware.cron4j', name: 'cron4j', version: '2.2.5'     // jvm cron
+    compile "org.slf4j:slf4j-simple:1.7.25"                                         // logging
+    compile 'com.google.guava:guava:23.1-jre'                                       // cache
+
+    compile 'com.neovisionaries:nv-websocket-client:2.3'
+    compile 'com.google.code.gson:gson:2.8.0'
+
+    testCompile 'junit:junit:4.12'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+publishing {
+    publications {
+        mavenCustom(MavenPublication) {
+            from components.java
+
+            artifact sourceJar {
+                classifier "sources"
+            }
+
+            pom.withXml {
+                asNode().children().last() + {
+                    resolveStrategy = Closure.DELEGATE_FIRST
+                    name rootProject.name
+                    url "https://github.com/Ingwersaft/James"
+                    licenses {
+                        license {
+                            name 'GNU General Public License v3.0'
+                            url 'https://www.gnu.org/licenses/gpl-3.0.en.html'
+                            distribution 'repo'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
