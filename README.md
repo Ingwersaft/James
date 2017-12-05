@@ -99,5 +99,11 @@ dependencies {
 </dependency>
 ```
 
+### Javadoc
+Jitpack also provides javadoc web publishing. Use the URL
+`https://jitpack.io/com/github/Ingwersaft/James/<VERSION>/javadoc/`
+(e.g.: [master-SNAPSHOT](https://jitpack.io/com/github/Ingwersaft/James/master-SNAPSHOT/javadoc/))
+to access the javadoc for the given version.
+
 ## Known Problems
  * all chats don't retry calls in case of errors
