@@ -30,4 +30,29 @@ class DslTest {
         assertEquals(false, created.autoStart)
         assertNull(created.name)
     }
+
+    @Test
+    fun testUseOtherJames() {
+        val other = james {
+            autoStart = false
+            map("1", "1") {
+                send("hello")
+            }
+            map("2", "2") {
+                send("hello")
+            }
+        }
+        val actualJames = james {
+            autoStart = false
+            use(other)
+            map("3", "3") {
+                send("hello")
+            }
+            map("4", "4") {
+                send("hello")
+            }
+        }
+        assertEquals("1;2;3;4", actualJames.mappings.map { it.key.pattern }.joinToString(";"))
+        assertEquals("1;2;3;4", actualJames.mappings.map { it.key.info }.joinToString(";"))
+    }
 }

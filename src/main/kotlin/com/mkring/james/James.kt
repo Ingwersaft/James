@@ -96,5 +96,15 @@ class James(var name: String? = null,
                     "username" to it.username)
         }
     }
+
+    /**
+     * Use mappings of other James instance (uses only mappings, no other config )
+     * Hint: Create other James instances with autoStart disabled
+     */
+    fun use(other: James) {
+        other.mappings.forEach { p, block ->
+            map(p.pattern, p.info, block)
+        }
+    }
 }
 
