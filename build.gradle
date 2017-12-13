@@ -114,7 +114,7 @@ publishing {
 }
 
 release {
-    versionPropertyFile = 'gradle.properties'
+    versionPropertyFile = 'build.gradle'
     buildTasks = ['build']
     scmAdapters = [
             net.researchgate.release.GitAdapter
