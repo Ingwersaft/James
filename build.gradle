@@ -6,17 +6,23 @@ buildscript {
     ext.dokka_version = '0.9.15'
 
     repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
         mavenCentral()
         jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
+        classpath "net.researchgate:gradle-release:2.6.0"
     }
 }
 
 apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.dokka'
+apply plugin: "net.researchgate.release"
+apply plugin: "net.researchgate.release"
 
 apply plugin: 'application'
 ext.main = 'com.mkring.james.JamesRuntimeKt'
@@ -74,7 +80,7 @@ task javadocJar(type: Jar, dependsOn: dokka) {
     from "$buildDir/javadoc"
 }
 
-build.finalizedBy(sourceJar,javadocJar)
+build.finalizedBy(sourceJar, javadocJar)
 
 publishing {
     publications {
@@ -104,5 +110,20 @@ publishing {
                 }
             }
         }
+    }
+}
+
+release {
+    versionPropertyFile = 'gradle.properties'
+    buildTasks = ['build']
+    scmAdapters = [
+            net.researchgate.release.GitAdapter
+    ]
+    git {
+        requireBranch = 'master'
+        pushToRemote = 'origin'
+        pushToBranchPrefix = ''
+        commitVersionFileOnly = false
+        signTag = false
     }
 }
