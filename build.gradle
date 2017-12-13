@@ -1,5 +1,4 @@
 group = 'com.github.Ingwersaft'
-version '1.0.0-SNAPSHOT'
 
 buildscript {
     ext.kotlin_version = '1.2.0'
@@ -114,7 +113,6 @@ publishing {
 }
 
 release {
-    versionPropertyFile = 'build.gradle'
     buildTasks = ['build']
     scmAdapters = [
             net.researchgate.release.GitAdapter
