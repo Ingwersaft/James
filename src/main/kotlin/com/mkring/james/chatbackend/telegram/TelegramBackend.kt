@@ -59,19 +59,7 @@ class TelegramBackend(override val abortKeywords: MutableList<String>) : ChatBac
                 val text = cleanText(update)
 
                 // handle ask callbacks
-                askResultMap[chatId]?.let {
-                    if (text isIn abortKeywords) {
-                        log.info("target $chatId received abortKeyword: $text")
-                        send(chatId, "aborted")
-                        askResultMap[chatId]?.cancel(true)
-                        askResultMap.remove(chatId)
-                        abortJob(chatId)
-                        return
-                    }
-                    askResultMap[chatId]?.complete(text)
-                    askResultMap.remove(chatId)
-                    return
-                }
+                if (callbackFutureHandled(text, chatId)) return
 
                 // launch first mapping
                 launchFirstMatchingMapping(text = text, uniqueChatTarget = chatId, username = update.message.from.userName,
@@ -90,7 +78,7 @@ class TelegramBackend(override val abortKeywords: MutableList<String>) : ChatBac
         }
     }
 
-    var askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
+    override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
 
     override fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit) {
         lg("added mapping for '$matcher' with prefix '$prefix'")

@@ -2,10 +2,7 @@ package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
 import com.mkring.james.abortJob
-import com.mkring.james.chatbackend.ChatBackend
-import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.isIn
-import com.mkring.james.chatbackend.launchFirstMatchingMapping
+import com.mkring.james.chatbackend.*
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
@@ -43,7 +40,8 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true
 
     var selfUsername = "NOTSETYET"
 
-    var askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
+    override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
+
     var loginResultMap: MutableMap<Int, CompletableFuture<String>> = mutableMapOf()
     val ws: WebSocket by lazy {
         WebSocketFactory().also {
@@ -126,19 +124,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true
                             log.info("found Streamupdate : $it")
 
                             // handle ask callbacks
-                            askResultMap[rid]?.let {
-                                if (text isIn abortKeywords) {
-                                    log.info("target $rid received abortKeyword: $text")
-                                    send(rid, "aborted")
-                                    askResultMap[rid]?.cancel(true)
-                                    askResultMap.remove(rid)
-                                    abortJob(rid)
-                                    return
-                                }
-                                askResultMap[rid]?.complete(text)
-                                askResultMap.remove(rid)
-                                return
-                            }
+                            if (callbackFutureHandled(text, rid)) return
 
                             // launch first found mapping
                             launchFirstMatchingMapping(text = text, uniqueChatTarget = rid, username = username,
