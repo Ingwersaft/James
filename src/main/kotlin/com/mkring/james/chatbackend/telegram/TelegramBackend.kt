@@ -5,7 +5,7 @@ import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.launchFIrstMatchingMapping
+import com.mkring.james.chatbackend.launchFirstMatchingMapping
 import com.mkring.james.chatbackend.lg
 import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.TelegramBotsApi
@@ -42,7 +42,7 @@ class TelegramBackend : ChatBackend {
                     lg("message null")
                     return
                 }
-                if (update.message.text == null) {
+                if (cleanText(update) == null) {
                     lg("text null")
                     return
                 }
@@ -56,7 +56,7 @@ class TelegramBackend : ChatBackend {
                 }
 
                 val chatId = update.message.chatId.toString()
-                val text = update.message.text
+                val text = cleanText(update)
 
                 // handle ask callbacks
                 askResultMap[chatId]?.let {
@@ -66,11 +66,19 @@ class TelegramBackend : ChatBackend {
                 }
 
                 // launch first mapping
-                // TODO get plain username for telegram
-                launchFIrstMatchingMapping(text = text, uniqueChatTarget = chatId, username = null,
+                launchFirstMatchingMapping(text = text, uniqueChatTarget = chatId, username = update.message.from.userName,
                         chat = this@TelegramBackend, chatLogicMappings = chatLogicMappings)
             }
 
+            private fun cleanText(update: Update): String {
+                val s = update.message.text
+                return if (s.contains("@")) {
+                    val splitted = s.split(Regex("@"))
+                    splitted.subList(0, splitted.size - 1).joinToString("@")
+                } else {
+                    s
+                }
+            }
         }
     }
 

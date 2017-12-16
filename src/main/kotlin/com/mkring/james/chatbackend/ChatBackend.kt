@@ -25,7 +25,7 @@ fun Any.lg(toBeLogged: Any) {
 }
 
 val log = LoggerFactory.getLogger(ChatBackend::class.java)
-fun launchFIrstMatchingMapping(text: String, uniqueChatTarget: String, username: String?, chat: ChatBackend,
+fun launchFirstMatchingMapping(text: String, uniqueChatTarget: String, username: String?, chat: ChatBackend,
                                chatLogicMappings: Map<String, Mapping.() -> Unit>): Job? {
     chatLogicMappings.filter { text.matches(Regex("^" + it.key + ".*", RegexOption.IGNORE_CASE)) }
             .entries.first().let { entry ->

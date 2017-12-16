@@ -3,7 +3,7 @@ package com.mkring.james.chatbackend.rocketchat
 import com.google.gson.Gson
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.launchFIrstMatchingMapping
+import com.mkring.james.chatbackend.launchFirstMatchingMapping
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
@@ -129,7 +129,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true, 
                             }
 
                             // launch first found mapping
-                            launchFIrstMatchingMapping(text = text, uniqueChatTarget = rid, username = username,
+                            launchFirstMatchingMapping(text = text, uniqueChatTarget = rid, username = username,
                                     chat = this@RocketBackend, chatLogicMappings = chatLogicMappings)
                         }
                     } catch (e: Exception) {

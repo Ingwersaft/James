@@ -28,7 +28,7 @@ class ChatBackendTest {
             send("answer")
         }
         val fakeChat = FakeChat()
-        launchFIrstMatchingMapping("some text", "target", "nvmd", fakeChat, mappings).also {
+        launchFirstMatchingMapping("some text", "target", "nvmd", fakeChat, mappings).also {
             runBlocking { it?.join() }
         }
         assertEquals("answer", fakeChat.lastSend)

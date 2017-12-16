@@ -106,4 +106,4 @@ Jitpack also provides javadoc web publishing. Use the URL
 to access the javadoc for the given version.
 
 ## Known Problems
- * all chats don't retry calls in case of errors
+ * chat interaction without retries in case of errors
