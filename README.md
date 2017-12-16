@@ -19,6 +19,10 @@ With...
 ```kotlin
 fun main(args: Array<String>) {
     james {
+        
+        abortKeywords += "cancel"
+        abortKeywords += "abort"
+                
         rocketchat {
                         websocketTarget = "wss://example.org/websocket"
                         username = "example_bot"

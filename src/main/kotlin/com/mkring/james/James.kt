@@ -1,9 +1,6 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.ChatBackend
-import com.mkring.james.chatbackend.RocketChat
-import com.mkring.james.chatbackend.Telegram
-import com.mkring.james.chatbackend.lg
+import com.mkring.james.chatbackend.*
 import com.mkring.james.chatbackend.rocketchat.RocketBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
@@ -24,6 +21,7 @@ class James(var name: String? = null,
     internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
     private var additionalChatOptions: Map<String, String> = emptyMap()
 
+    internal lateinit var chatConfig: ChatConfig
     fun autoStart() = if (autoStart) {
         start()
     } else {
@@ -32,6 +30,8 @@ class James(var name: String? = null,
 
     fun start(): James {
         lg("start()")
+
+        createChatBackend()
         val mappingprefix = when (name) {
             null -> ""
             else -> name + " "
@@ -49,6 +49,26 @@ class James(var name: String? = null,
         chat.login(additionalChatOptions)
 
         return this
+    }
+
+    private fun createChatBackend() {
+        val config = chatConfig
+        when (config) {
+            is RocketChat -> {
+                this.chat = RocketBackend(websocketTarget = config.websocketTarget,
+                        ignoreInvalidCa = config.ignoreInvalidCa,
+                        sslVerifyHostname = config.sslVerifyHostname,
+                        abortKeywords = mutableListOf(),
+                        jamesName = name ?: "")
+                this.additionalChatOptions = mapOf("username" to config.username, "password" to config.password)
+            }
+            is Telegram -> {
+                this.chat = TelegramBackend(mutableListOf(), name ?: "")
+                this.additionalChatOptions = mapOf("token" to config.token,
+                        "username" to config.username)
+            }
+        }
+
     }
 
     private fun addHelpMapping(mappingprefix: String, plainHelp: String, helpCommand: String) {
@@ -85,26 +105,14 @@ class James(var name: String? = null,
      * create RochetChat config/chat
      */
     fun rocketchat(init: RocketChat.() -> Unit) {
-        val config = RocketChat().also(init)
-        config.let {
-            this.chat = RocketBackend(websocketTarget = it.websocketTarget,
-                    ignoreInvalidCa = it.ignoreInvalidCa,
-                    sslVerifyHostname = it.sslVerifyHostname,
-                    abortKeywords = mutableListOf())
-            this.additionalChatOptions = mapOf("username" to it.username, "password" to it.password)
-        }
+         chatConfig = RocketChat().also(init)
     }
 
     /**
      * create Telegram config/chat
      */
     fun telegram(init: Telegram.() -> Unit) {
-        val config = Telegram().also(init)
-        config.let {
-            this.chat = TelegramBackend(mutableListOf())
-            this.additionalChatOptions = mapOf("token" to it.token,
-                    "username" to it.username)
-        }
+        chatConfig = Telegram().also(init)
     }
 
     /**

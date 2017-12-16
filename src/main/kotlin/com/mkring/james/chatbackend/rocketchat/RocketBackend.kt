@@ -19,9 +19,10 @@ import java.util.concurrent.TimeUnit
 /**
  * @param websocketTarget example: wss://rocketchat.lan/websocket
  */
-class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true
-                    , ignoreInvalidCa: Boolean = false
-                    , override val abortKeywords: MutableList<String>) : ChatBackend {
+class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
+                    ignoreInvalidCa: Boolean = false,
+                    override val abortKeywords: MutableList<String>,
+                    override val jamesName: String) : ChatBackend {
     val log = LoggerFactory.getLogger(javaClass)
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this

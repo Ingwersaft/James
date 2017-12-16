@@ -1,6 +1,5 @@
 package com.mkring.james.chatbackend.telegram
 
-import com.mkring.james.abortJob
 import com.mkring.james.chatbackend.*
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
@@ -15,7 +14,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 
-class TelegramBackend(override val abortKeywords: MutableList<String>) : ChatBackend {
+class TelegramBackend(override val abortKeywords: MutableList<String>,
+                      override val jamesName: String) : ChatBackend {
 
     private lateinit var session: BotSession
 

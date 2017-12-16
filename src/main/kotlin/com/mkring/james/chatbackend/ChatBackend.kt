@@ -22,6 +22,7 @@ interface ChatBackend {
     fun shutdown()
     val abortKeywords: MutableList<String>
     val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>>
+    val jamesName: String
 }
 
 fun Any.lg(toBeLogged: Any) {
@@ -33,8 +34,12 @@ fun Any.lg(toBeLogged: Any) {
 val log = LoggerFactory.getLogger(ChatBackend::class.java)
 fun launchFirstMatchingMapping(text: String, uniqueChatTarget: String, username: String?, chat: ChatBackend,
                                chatLogicMappings: Map<String, Mapping.() -> Unit>): Job? {
-    val keyword = text.trim().split(Regex("\\s+")).first()
-    chatLogicMappings.filter { it.key == keyword }
+    println("chat.jamesName=${chat.jamesName}")
+    val keyword = text.replace(chat.jamesName, "").trim().split(Regex("\\s+")).first()
+    chatLogicMappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
+    println("text=$text")
+    println("keyword=$keyword")
+    chatLogicMappings.filter { it.key.removePrefix(chat.jamesName).trim() == keyword }
             .entries.first().let { entry ->
         log.info("going to handle ${entry.key}")
         val job = launch {

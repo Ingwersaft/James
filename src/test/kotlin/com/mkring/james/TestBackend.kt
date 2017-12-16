@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit
 
 
 class TestBackend(override val abortKeywords: MutableList<String> = mutableListOf(),
-                  override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()) : ChatBackend {
+                  override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf(),
+                  override val jamesName: String = "") : ChatBackend {
     override fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
