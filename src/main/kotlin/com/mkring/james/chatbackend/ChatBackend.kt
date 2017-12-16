@@ -33,7 +33,8 @@ fun Any.lg(toBeLogged: Any) {
 val log = LoggerFactory.getLogger(ChatBackend::class.java)
 fun launchFirstMatchingMapping(text: String, uniqueChatTarget: String, username: String?, chat: ChatBackend,
                                chatLogicMappings: Map<String, Mapping.() -> Unit>): Job? {
-    chatLogicMappings.filter { text.matches(Regex("^" + it.key + ".*", RegexOption.IGNORE_CASE)) }
+    val keyword = text.trim().split(Regex("\\s+")).first()
+    chatLogicMappings.filter { it.key == keyword }
             .entries.first().let { entry ->
         log.info("going to handle ${entry.key}")
         val job = launch {

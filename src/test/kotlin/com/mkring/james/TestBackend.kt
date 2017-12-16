@@ -5,10 +5,12 @@ import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 
-class TestBackend : ChatBackend {
+class TestBackend(override val abortKeywords: MutableList<String> = mutableListOf(),
+                  override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()) : ChatBackend {
     override fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }

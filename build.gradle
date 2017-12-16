@@ -1,7 +1,7 @@
 group = 'com.github.Ingwersaft'
 
 buildscript {
-    ext.kotlin_version = '1.2.0'
+    ext.kotlin_version = '1.2.10'
     ext.dokka_version = '0.9.15'
 
     repositories {
@@ -42,8 +42,8 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.19.1'
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.19.1'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.20'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.20'
 
     compile 'me.sargunvohra.lib:pokekotlin:2.3.0'                                   // poke api
     compile 'org.telegram:telegrambots:3.3'                                         // telegram api
@@ -123,5 +123,10 @@ release {
         pushToBranchPrefix = ''
         commitVersionFileOnly = false
         signTag = false
+    }
+}
+kotlin {
+    experimental {
+        coroutines "enable"
     }
 }
