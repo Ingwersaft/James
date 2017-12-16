@@ -1,12 +1,10 @@
 package com.mkring.james.chatbackend.telegram
 
+import com.mkring.james.abortJob
+import com.mkring.james.chatbackend.*
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
-import com.mkring.james.chatbackend.ChatBackend
-import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.launchFirstMatchingMapping
-import com.mkring.james.chatbackend.lg
 import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.TelegramBotsApi
 import org.telegram.telegrambots.api.methods.send.SendMessage
@@ -17,15 +15,17 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 
-class TelegramBackend : ChatBackend {
+class TelegramBackend(override val abortKeywords: MutableList<String>) : ChatBackend {
+
     private lateinit var session: BotSession
+
     override fun shutdown() {
         session.stop()
     }
 
     private lateinit var token: String
-    private lateinit var username: String
 
+    private lateinit var username: String
     val chatLogicMappings = mutableMapOf<String, Mapping.() -> Unit>()
 
     val bot: TelegramLongPollingBot by lazy {
@@ -60,6 +60,14 @@ class TelegramBackend : ChatBackend {
 
                 // handle ask callbacks
                 askResultMap[chatId]?.let {
+                    if (text isIn abortKeywords) {
+                        log.info("target $chatId received abortKeyword: $text")
+                        send(chatId, "aborted")
+                        askResultMap[chatId]?.cancel(true)
+                        askResultMap.remove(chatId)
+                        abortJob(chatId)
+                        return
+                    }
                     askResultMap[chatId]?.complete(text)
                     askResultMap.remove(chatId)
                     return
@@ -108,3 +116,4 @@ class TelegramBackend : ChatBackend {
     }
 
 }
+

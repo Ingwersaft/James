@@ -19,7 +19,7 @@ fun james(init: James.() -> Unit): James = James().also(init).autoStart()
 
 @LimitClosureScope
 class James(var name: String? = null,
-            var autoStart: Boolean = true) {
+            var autoStart: Boolean = true, val abortKeywords: MutableList<String> = mutableListOf()) {
     internal lateinit var chat: ChatBackend
     internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
     private var additionalChatOptions: Map<String, String> = emptyMap()
@@ -36,6 +36,9 @@ class James(var name: String? = null,
             null -> ""
             else -> name + " "
         }
+
+        chat.abortKeywords.addAll(abortKeywords)
+
         lg("mapping prefix:$mappingprefix")
         val plainHelp = mappings.map { "$mappingprefix${it.key.pattern} - ${it.key.info}" }.joinToString("\n")
 
@@ -50,9 +53,15 @@ class James(var name: String? = null,
 
     private fun addHelpMapping(mappingprefix: String, plainHelp: String, helpCommand: String) {
         chat.addMapping(mappingprefix, MappingPattern(helpCommand, "")) {
-            """James at yor service:
-                    |---
-                """.trimMargin().trim().let { send(it + "\n" + plainHelp) }
+            val lines = mutableListOf<String>()
+            lines += "James at yor service:"
+            lines += ""
+            if (abortKeywords.isNotEmpty()) {
+                lines += "abort interactions with: ${abortKeywords.joinToString(", ")}"
+            }
+            lines += "---"
+            lines += plainHelp
+            send(lines.joinToString("\n"))
         }
     }
 
@@ -80,7 +89,8 @@ class James(var name: String? = null,
         config.let {
             this.chat = RocketBackend(websocketTarget = it.websocketTarget,
                     ignoreInvalidCa = it.ignoreInvalidCa,
-                    sslVerifyHostname = it.sslVerifyHostname)
+                    sslVerifyHostname = it.sslVerifyHostname,
+                    abortKeywords = mutableListOf())
             this.additionalChatOptions = mapOf("username" to it.username, "password" to it.password)
         }
     }
@@ -91,7 +101,7 @@ class James(var name: String? = null,
     fun telegram(init: Telegram.() -> Unit) {
         val config = Telegram().also(init)
         config.let {
-            this.chat = TelegramBackend()
+            this.chat = TelegramBackend(mutableListOf())
             this.additionalChatOptions = mapOf("token" to it.token,
                     "username" to it.username)
         }

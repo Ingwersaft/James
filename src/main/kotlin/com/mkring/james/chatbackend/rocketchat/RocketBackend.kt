@@ -1,8 +1,10 @@
 package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
+import com.mkring.james.abortJob
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.UniqueChatTarget
+import com.mkring.james.chatbackend.isIn
 import com.mkring.james.chatbackend.launchFirstMatchingMapping
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
@@ -20,7 +22,9 @@ import java.util.concurrent.TimeUnit
 /**
  * @param websocketTarget example: wss://rocketchat.lan/websocket
  */
-class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true, ignoreInvalidCa: Boolean = false) : ChatBackend {
+class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true
+                    , ignoreInvalidCa: Boolean = false
+                    , override val abortKeywords: MutableList<String>) : ChatBackend {
     val log = LoggerFactory.getLogger(javaClass)
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this
@@ -123,6 +127,14 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true, 
 
                             // handle ask callbacks
                             askResultMap[rid]?.let {
+                                if (text isIn abortKeywords) {
+                                    log.info("target $rid received abortKeyword: $text")
+                                    send(rid, "aborted")
+                                    askResultMap[rid]?.cancel(true)
+                                    askResultMap.remove(rid)
+                                    abortJob(rid)
+                                    return
+                                }
                                 askResultMap[rid]?.complete(text)
                                 askResultMap.remove(rid)
                                 return

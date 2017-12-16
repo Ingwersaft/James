@@ -25,7 +25,7 @@ sealed class Ask<out T> {
 
     object Timeout : Ask<Nothing>() {
         override fun get(): Nothing {
-            throw IllegalStateException("timeout!")
+            throw IllegalStateException("timeout or aborted")
         }
 
         override fun toString() = "[Timeout]"

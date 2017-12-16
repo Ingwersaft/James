@@ -1,5 +1,7 @@
 package com.mkring.james.chatbackend
 
+import com.mkring.james.RunningJobs
+import com.mkring.james.abortJob
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
@@ -16,6 +18,7 @@ interface ChatBackend {
     fun send(target: UniqueChatTarget, text: String, options: Map<String, String> = emptyMap())
     fun ask(timeout: Int, timeunit: TimeUnit, target: UniqueChatTarget, text: String, options: Map<String, String> = emptyMap()): Ask<String>
     fun shutdown()
+    val abortKeywords: MutableList<String>
 }
 
 fun Any.lg(toBeLogged: Any) {
@@ -34,6 +37,12 @@ fun launchFirstMatchingMapping(text: String, uniqueChatTarget: String, username:
             Mapping(text, uniqueChatTarget, username, chat).apply { entry.value.invoke(this) }
         }
         log.info("launch done")
+        RunningJobs.running.put(uniqueChatTarget, job)
         return job
     }
+}
+
+internal infix fun String.isIn(abortKeywords: List<String>): Boolean {
+    log.info("isIn(): $this $abortKeywords")
+    return abortKeywords.contains(this)
 }
