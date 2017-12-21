@@ -1,8 +1,10 @@
 package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
-import com.mkring.james.abortJob
-import com.mkring.james.chatbackend.*
+import com.mkring.james.chatbackend.ChatBackend
+import com.mkring.james.chatbackend.UniqueChatTarget
+import com.mkring.james.chatbackend.callbackFutureHandled
+import com.mkring.james.chatbackend.launchFirstMatchingMapping
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
@@ -22,7 +24,7 @@ import java.util.concurrent.TimeUnit
 class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
                     ignoreInvalidCa: Boolean = false,
                     override val abortKeywords: MutableList<String>,
-                    override val jamesName: String) : ChatBackend {
+                    override val jamesName: String, var defaultAvatar: String) : ChatBackend {
     val log = LoggerFactory.getLogger(javaClass)
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this
@@ -251,7 +253,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
 
     override fun send(target: UniqueChatTarget, text: String, options: Map<String, String>) {
         log.info("send: target=$target, text=$text")
-        ws.sendToChat(target, random.nextInt(10000), text, options.getOrDefault("avatar", ":tophat:"))
+        ws.sendToChat(target, random.nextInt(10000), text, options.getOrDefault("avatar", defaultAvatar))
     }
 
     override fun ask(timeout: Int, timeunit: TimeUnit, target: UniqueChatTarget, text: String, options: Map<String, String>): Ask<String> {
@@ -259,7 +261,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
         val uuid = random.nextInt(10000)
         val future = CompletableFuture<String>()
         askResultMap.put(target, future)
-        ws.sendToChat(target, uuid, text, options.getOrDefault("avatar", ":tophat:"))
+        ws.sendToChat(target, uuid, text, options.getOrDefault("avatar", defaultAvatar))
         return Ask.of { future.get(timeout.toLong(), timeunit) }
     }
 

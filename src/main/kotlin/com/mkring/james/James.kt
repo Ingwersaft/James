@@ -59,7 +59,8 @@ class James(var name: String? = null,
                         ignoreInvalidCa = config.ignoreInvalidCa,
                         sslVerifyHostname = config.sslVerifyHostname,
                         abortKeywords = mutableListOf(),
-                        jamesName = name ?: "")
+                        jamesName = name ?: "",
+                        defaultAvatar = config.defaultAvatar)
                 this.additionalChatOptions = mapOf("username" to config.username, "password" to config.password)
             }
             is Telegram -> {
@@ -105,7 +106,7 @@ class James(var name: String? = null,
      * create RochetChat config/chat
      */
     fun rocketchat(init: RocketChat.() -> Unit) {
-         chatConfig = RocketChat().also(init)
+        chatConfig = RocketChat().also(init)
     }
 
     /**

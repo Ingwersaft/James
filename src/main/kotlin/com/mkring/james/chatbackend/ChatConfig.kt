@@ -11,6 +11,7 @@ class RocketChat : ChatConfig() {
     var ignoreInvalidCa: Boolean = false
     lateinit var username: String
     lateinit var password: String
+    var defaultAvatar = ":tophat:"
 
 }
 

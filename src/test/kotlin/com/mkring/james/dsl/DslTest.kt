@@ -1,6 +1,6 @@
 package com.mkring.james.dsl
 
-import com.mkring.james.chatbackend.rocketchat.RocketBackend
+import com.mkring.james.chatbackend.RocketChat
 import com.mkring.james.james
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
@@ -23,10 +23,11 @@ class DslTest {
                 send("world")
             }
             map("/hallo", "some text", block)
-
-            assertEquals(RocketBackend::class, chat::class)
             assertEquals(mappings[MappingPattern("/hallo", "some text")], block)
         }
+        assertEquals(RocketChat::class, created.chatConfig::class)
+
+
         assertEquals(false, created.autoStart)
         assertNull(created.name)
     }
