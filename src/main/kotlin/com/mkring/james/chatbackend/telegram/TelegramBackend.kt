@@ -14,8 +14,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 
-class TelegramBackend(override val abortKeywords: MutableList<String>,
-                      override val jamesName: String) : ChatBackend {
+class TelegramBackend(
+    override val abortKeywords: MutableList<String>,
+    override val jamesName: String
+) : ChatBackend {
 
     private lateinit var session: BotSession
 
@@ -62,8 +64,10 @@ class TelegramBackend(override val abortKeywords: MutableList<String>,
                 if (callbackFutureHandled(text, chatId)) return
 
                 // launch first mapping
-                launchFirstMatchingMapping(text = text, uniqueChatTarget = chatId, username = update.message.from.userName,
-                        chat = this@TelegramBackend, chatLogicMappings = chatLogicMappings)
+                launchFirstMatchingMapping(
+                    text = text, uniqueChatTarget = chatId, username = update.message.from.userName,
+                    chat = this@TelegramBackend, chatLogicMappings = chatLogicMappings
+                )
             }
 
             private fun cleanText(update: Update): String {
@@ -82,7 +86,7 @@ class TelegramBackend(override val abortKeywords: MutableList<String>,
 
     override fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit) {
         lg("added mapping for '$matcher' with prefix '$prefix'")
-        chatLogicMappings.put(prefix + matcher.pattern, mapping)
+        chatLogicMappings[prefix + matcher.pattern] = mapping
     }
 
     override fun login(options: Map<String, String>) {
@@ -92,14 +96,25 @@ class TelegramBackend(override val abortKeywords: MutableList<String>,
     }
 
     override fun send(target: UniqueChatTarget, text: String, options: Map<String, String>) {
-        bot.execute(SendMessage(target, text))
+        bot.execute(SendMessage(target, text).apply {
+            options["parse_mode"]?.let {
+                lg("SendMessage parse mode: $it")
+                setParseMode(it)
+            }
+        })
     }
 
-    override fun ask(timeout: Int, timeunit: TimeUnit, target: UniqueChatTarget, text: String, options: Map<String, String>): Ask<String> {
+    override fun ask(
+        timeout: Int,
+        timeunit: TimeUnit,
+        target: UniqueChatTarget,
+        text: String,
+        options: Map<String, String>
+    ): Ask<String> {
         lg("ask: target=$target, text=$text")
         val future = CompletableFuture<String>()
-        askResultMap.put(target, future)
-        send(target, text)
+        askResultMap[target] = future
+        send(target, text, options)
         return Ask.of { future.get(timeout.toLong(), timeunit) }
     }
 

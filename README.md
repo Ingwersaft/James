@@ -62,7 +62,10 @@ options.put("avatar",":alien:")
 ```
 
 ### Telegram
-*No special options yet*
+Parsemode (`HTML` or `Markdown` supported)
+```kotlin
+options["parse_mode"] == "Markdown"
+```
 
 general stuff:
  * [How to get a telegram bot](http://not.found.org) 
