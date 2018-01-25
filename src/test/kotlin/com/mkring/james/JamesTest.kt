@@ -32,6 +32,7 @@ class JamesTest {
                 ignoreInvalidCa = true
             }
             name = "chatbot"
+            autoStart = false
             map("frage", "eine frage") {
                 askTimeout = 1
                 val answer = ask("sende irgendwas bitte!").getOrElse("schade, zu langsam")

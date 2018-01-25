@@ -15,8 +15,10 @@ annotation class LimitClosureScope
 fun james(init: James.() -> Unit): James = James().also(init).autoStart()
 
 @LimitClosureScope
-class James(var name: String? = null,
-            var autoStart: Boolean = true, val abortKeywords: MutableList<String> = mutableListOf()) {
+class James(
+    var name: String? = null,
+    var autoStart: Boolean = true, val abortKeywords: MutableList<String> = mutableListOf()
+) {
     internal lateinit var chat: ChatBackend
     internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
     private var additionalChatOptions: Map<String, String> = emptyMap()
@@ -55,18 +57,22 @@ class James(var name: String? = null,
         val config = chatConfig
         when (config) {
             is RocketChat -> {
-                this.chat = RocketBackend(websocketTarget = config.websocketTarget,
-                        ignoreInvalidCa = config.ignoreInvalidCa,
-                        sslVerifyHostname = config.sslVerifyHostname,
-                        abortKeywords = mutableListOf(),
-                        jamesName = name ?: "",
-                        defaultAvatar = config.defaultAvatar)
+                this.chat = RocketBackend(
+                    websocketTarget = config.websocketTarget,
+                    ignoreInvalidCa = config.ignoreInvalidCa,
+                    sslVerifyHostname = config.sslVerifyHostname,
+                    abortKeywords = mutableListOf(),
+                    jamesName = name ?: "",
+                    defaultAvatar = config.defaultAvatar
+                )
                 this.additionalChatOptions = mapOf("username" to config.username, "password" to config.password)
             }
             is Telegram -> {
                 this.chat = TelegramBackend(mutableListOf(), name ?: "")
-                this.additionalChatOptions = mapOf("token" to config.token,
-                        "username" to config.username)
+                this.additionalChatOptions = mapOf(
+                    "token" to config.token,
+                    "username" to config.username
+                )
             }
         }
 
@@ -75,7 +81,7 @@ class James(var name: String? = null,
     private fun addHelpMapping(mappingprefix: String, plainHelp: String, helpCommand: String) {
         chat.addMapping(mappingprefix, MappingPattern(helpCommand, "")) {
             val lines = mutableListOf<String>()
-            lines += "James at yor service:"
+            lines += "${name ?: "James"} at yor service:"
             lines += ""
             if (abortKeywords.isNotEmpty()) {
                 lines += "abort interactions with: ${abortKeywords.joinToString(", ")}"
