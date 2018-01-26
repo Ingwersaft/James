@@ -144,5 +144,19 @@ class JamesV3(
             map(p.pattern, p.info, block)
         }
     }
+
+    /**
+     * If you need something other than the default backends, provide your own one
+     * !Important! You have to interact with both io-channels:
+     *
+     * [ChatBackendV3.backendToJamesChannel]: When your backend receives messages, you have to forward it
+     * to this channel. James will process them.
+     *
+     * [ChatBackendV3.fromJamesToBackendChannel]: You must! receive messaged on this channel. This is the channel
+     * for James to send something back to the backend caller. This is best handled in a backend thread or coroutine
+     */
+    fun addCustomChatBackend(custom: ChatBackendV3) {
+        chatBackends += custom
+    }
 }
 

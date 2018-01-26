@@ -5,7 +5,6 @@ import com.mkring.james.chatbackend.log
 import com.mkring.james.prototype.ChatBackendV3
 import com.mkring.james.prototype.IncomingPayload
 import com.mkring.james.prototype.fireAndForgetLoop
-import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.launch
 import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.ApiContextInitializer
