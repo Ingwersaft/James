@@ -16,3 +16,4 @@ gradle-app.setting
 out/
 *.iml
 /src/main/kotlin/Ignore.kt
+**/TelegramDebugDelete.kt

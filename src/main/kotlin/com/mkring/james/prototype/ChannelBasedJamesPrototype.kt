@@ -3,10 +3,10 @@ package com.mkring.james.prototype
 import com.mkring.james.abortJob
 import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.chatbackend.isIn
-import com.mkring.james.chatbackend.log
 import com.mkring.james.mapping.Ask
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.Channel
+import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
@@ -23,13 +23,14 @@ data class OutgoingPayload(
 )
 
 abstract class ChatBackendV3 {
-    val backendToJamesChannel: Channel<IncomingPayload> = Channel(2)
-    val fromJamesToBackendChannel: Channel<OutgoingPayload> = Channel(2)
+    val backendToJamesChannel: Channel<IncomingPayload> = Channel(10)
+    val fromJamesToBackendChannel: Channel<OutgoingPayload> = Channel(10)
     abstract suspend fun start()
 }
 
 class ChatV2(
-    val mappings: MutableMap<String, MappingV2.() -> Unit>,
+    val type: String,
+    val mappings: Map<String, MappingV2.() -> Unit>,
     val chatBackendV3: ChatBackendV3,
     val abortKeywords: MutableList<String>
 ) {
@@ -37,25 +38,25 @@ class ChatV2(
     private val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
     suspend fun start() {
         chatBackendV3.start()
-        println("ChatV2 chat started, now iterating chatBackend")
-        launch {
-            while (true) {
-                chatBackendV3.backendToJamesChannel.receive().let { (uniqueChatTarget, username, text) ->
-                    println("chatBackendV3.backendToJamesChannel received $text from $username - $uniqueChatTarget")
-                    if (callbackFutureHandled(text, uniqueChatTarget).not()) {
-                        println("mappings=$mappings")
-                        mappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
+        log.info("ChatV2 chat started, now iterating chatBackend")
+        fireAndForgetLoop("receive-from-backends") {
+            chatBackendV3.backendToJamesChannel.receive().let { (uniqueChatTarget, username, text) ->
+                log.info("chatBackendV3.backendToJamesChannel received $text from $username - $uniqueChatTarget")
+                if (callbackFutureHandled(text, uniqueChatTarget).not()) {
+                    log.debug("mappings=$mappings")
+                    mappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
 
-                        mappings.entries.firstOrNull()?.let { entry ->
-                            log.info("going to handle ${entry.key}")
-                            val job = launch {
-                                MappingV2(text, uniqueChatTarget, username, this@ChatV2).apply {
-                                    entry.value.invoke(this)
-                                }
+                    mappings.entries.firstOrNull()?.let { entry ->
+                        log.info("going to handle ${entry.key}")
+                        val job = launch {
+                            MappingV2(text, uniqueChatTarget, username, this@ChatV2).apply {
+                                entry.value.invoke(this)
                             }
-                            log.info("launch done")
-                            runningJobs.put(uniqueChatTarget, job)
                         }
+                        log.info("launch done")
+                        runningJobs.put(uniqueChatTarget, job)
+                    } ?: Unit.let {
+                        log.debug("nothing found for $text from $uniqueChatTarget")
                     }
                 }
             }
@@ -97,18 +98,20 @@ class ChatV2(
         send(OutgoingPayload(target, text, options))
         return Ask.of { future.get(timeout.toLong(), timeunit) }
     }
+
+    companion object {
+        private val log = LoggerFactory.getLogger("ChatV2")
+    }
 }
 
 class TestingChatBackend : ChatBackendV3() {
     override suspend fun start() {
         println("start called")
-        launch {
-            while (true) {
-                fromJamesToBackendChannel.receive().let {
-                    println("going to send to backend: $it")
-                }
-                delay(10)
+        fireAndForgetLoop("debugging") {
+            fromJamesToBackendChannel.receive().let {
+                println("going to send to backend: $it")
             }
+            delay(10)
         }
         println("start done")
     }
@@ -159,7 +162,7 @@ fun main(args: Array<String>) = runBlocking {
         send("world")
         ask("time").get().let { println("response: $it") }
     }
-    ChatV2(mutableMapOf("/hallo" to mapping), chat, mutableListOf("/abort")).apply {
+    ChatV2("TestingChatBackend",mutableMapOf("/hallo" to mapping), chat, mutableListOf("/abort")).apply {
         start()
     }
 
@@ -171,6 +174,20 @@ fun main(args: Array<String>) = runBlocking {
     delay(100)
 }
 
-private fun <T> Deferred<T>.awaitBlocking(): T = runBlocking {
+fun <T> Deferred<T>.awaitBlocking(): T = runBlocking {
     await()
+}
+
+private val fireAndForgetLoopLog = LoggerFactory.getLogger("fireAndForgetLoop")
+suspend fun fireAndForgetLoop(name: String, block: suspend CoroutineScope.() -> Unit) = launch {
+    while (true) {
+        try {
+            block()
+        } catch (e: Exception) {
+            fireAndForgetLoopLog.error("catched exception in $name routing: ${e::class.java.simpleName}:${e.message}")
+        }
+        delay(10)
+    }
+}.also {
+    fireAndForgetLoopLog.info("launched $name")
 }

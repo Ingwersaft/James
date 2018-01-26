@@ -30,7 +30,7 @@ class TelegramBackend(
     private lateinit var username: String
     val chatLogicMappings = mutableMapOf<String, Mapping.() -> Unit>()
 
-    val bot: TelegramLongPollingBot by lazy {
+    private val bot: TelegramLongPollingBot by lazy {
         ApiContextInitializer.init()
         object : TelegramLongPollingBot() {
             override fun getBotToken(): String = token

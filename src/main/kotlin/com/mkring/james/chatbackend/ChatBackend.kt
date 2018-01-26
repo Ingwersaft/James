@@ -51,7 +51,7 @@ fun launchFirstMatchingMapping(
             Mapping(text, uniqueChatTarget, username, chat).apply { entry.value.invoke(this) }
         }
         log.info("launch done")
-        RunningJobs.running.put(uniqueChatTarget, job)
+        RunningJobs.running[uniqueChatTarget] = job
         return job
     }
 }
