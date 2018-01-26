@@ -37,7 +37,7 @@ class TelegramBackendV2(val botToken: String, val botUsername: String) : ChatBac
     }
 
     private val bot: TelegramLongPollingBot by lazy {
-        log.info("TelegramLongPollingBot staring up")
+        log.info("TelegramLongPollingBot starting up")
         ApiContextInitializer.init()
         object : TelegramLongPollingBot() {
             override fun getBotToken(): String = this@TelegramBackendV2.botToken

@@ -3,6 +3,7 @@ package com.mkring.james.prototype
 import com.mkring.james.abortJob
 import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.chatbackend.isIn
+import com.mkring.james.chatbackend.lg
 import com.mkring.james.mapping.Ask
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.Channel
@@ -32,24 +33,26 @@ class ChatV2(
     val type: String,
     val mappings: Map<String, MappingV2.() -> Unit>,
     val chatBackendV3: ChatBackendV3,
-    val abortKeywords: MutableList<String>
+    val abortKeywords: MutableList<String>,
+    val mappingprefix: String
 ) {
     private val runningJobs = mutableMapOf<UniqueChatTarget, Job>()
     private val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
     suspend fun start() {
+        log.info("start() called")
+        log.info("received the following mappings:\n" + mappings.map { it.key }.joinToString("\n"))
         chatBackendV3.start()
         log.info("ChatV2 chat started, now iterating chatBackend")
         fireAndForgetLoop("receive-from-backends") {
             chatBackendV3.backendToJamesChannel.receive().let { (uniqueChatTarget, username, text) ->
                 log.info("chatBackendV3.backendToJamesChannel received $text from $username - $uniqueChatTarget")
                 if (callbackFutureHandled(text, uniqueChatTarget).not()) {
-                    log.debug("mappings=$mappings")
                     mappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
 
-                    mappings.entries.firstOrNull()?.let { entry ->
+                    mappings.entries.filter { text.startsWith(it.key) }.firstOrNull()?.let { entry ->
                         log.info("going to handle ${entry.key}")
                         val job = launch {
-                            MappingV2(text, uniqueChatTarget, username, this@ChatV2).apply {
+                            MappingV2(text, uniqueChatTarget, username, mappingprefix, this@ChatV2).apply {
                                 entry.value.invoke(this)
                             }
                         }
@@ -127,13 +130,15 @@ class MappingV2(
     private val commandText: String,
     private val uniqueChatTarget: UniqueChatTarget,
     val username: String?,
+    private val mappingprefix: String,
     private val parentChat: ChatV2
 ) {
     /**
      * prefix and pattern will be present too!
      */
     val arguments by lazy {
-        commandText.removePrefix(username ?: "").trim().split(Regex("\\s+")).filterNot { it.isEmpty() }.toList()
+        lg("commandText=$commandText username=$username")
+        commandText.removePrefix(mappingprefix).trim().split(Regex("\\s+")).filterNot { it.isEmpty() }.toList()
     }
 
     /**
@@ -162,7 +167,13 @@ fun main(args: Array<String>) = runBlocking {
         send("world")
         ask("time").get().let { println("response: $it") }
     }
-    ChatV2("TestingChatBackend",mutableMapOf("/hallo" to mapping), chat, mutableListOf("/abort")).apply {
+    ChatV2(
+        "TestingChatBackend",
+        mutableMapOf("/hallo" to mapping),
+        chat,
+        mutableListOf("/abort"),
+        ""
+    ).apply {
         start()
     }
 

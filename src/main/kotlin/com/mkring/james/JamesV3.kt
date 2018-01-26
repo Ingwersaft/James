@@ -1,12 +1,19 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.*
+import com.mkring.james.chatbackend.ChatConfig
+import com.mkring.james.chatbackend.RocketChat
+import com.mkring.james.chatbackend.Telegram
+import com.mkring.james.chatbackend.lg
 import com.mkring.james.chatbackend.telegram.TelegramBackendV2
-import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
 import com.mkring.james.prototype.*
 import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.launch
+
+/**
+ * builds and starts a James instance
+ */
+fun jamesV3(init: JamesV3.() -> Unit): JamesV3 = JamesV3().also(init).autoStart()
 
 @LimitClosureScope
 class JamesV3(
@@ -36,20 +43,22 @@ class JamesV3(
             else -> name + " "
         }
 
-        //chat.abortKeywords.addAll(abortKeywords)
-
         lg("mapping prefix:$mappingprefix")
         val plainHelp = mappings.map { "$mappingprefix${it.key.pattern} - ${it.key.info}" }.joinToString("\n")
-        val helpMapping = createHelpMapping(mappingprefix, plainHelp, "help")
-        val helpMappingSlash = createHelpMapping(mappingprefix, plainHelp, "/help")
+        val helpMapping = createHelpMapping(plainHelp, "help")
+        val helpMappingSlash = createHelpMapping(plainHelp, "/help")
         mappings[MappingPattern(helpMapping.first, "nvmd")] = helpMapping.second
+        mappings[MappingPattern(helpMappingSlash.first, "nvmd")] = helpMappingSlash.second
+        log.info("going to startup ${chatBackends.size} chatBackends")
         chatBackends.forEach {
             actualChats += ChatV2(
+                mappingprefix = mappingprefix,
                 type = it::class.java.simpleName,
                 mappings = mappings.map { "$mappingprefix${it.key.pattern}" to it.value }.toMap(),
                 abortKeywords = abortKeywords, chatBackendV3 = it
             ).also {
-                fireAndForgetLoop("chat-${it.type}") {
+                launch {
+                    log.info("starting ${it.type}")
                     it.start()
                 }
             }
@@ -78,7 +87,6 @@ class JamesV3(
     }
 
     private fun createHelpMapping(
-        mappingprefix: String,
         plainHelp: String,
         helpCommand: String
     ): Pair<String, MappingV2.() -> Unit> {
@@ -93,7 +101,7 @@ class JamesV3(
         val mappingBlock: MappingV2.() -> Unit = {
             send(lines.joinToString("\n"))
         }
-        return Pair("$mappingprefix$helpCommand", mappingBlock)
+        return Pair(helpCommand, mappingBlock)
     }
 
     fun stop() {
