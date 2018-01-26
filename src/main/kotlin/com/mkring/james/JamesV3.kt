@@ -4,9 +4,13 @@ import com.mkring.james.chatbackend.ChatConfig
 import com.mkring.james.chatbackend.RocketChat
 import com.mkring.james.chatbackend.Telegram
 import com.mkring.james.chatbackend.lg
+import com.mkring.james.chatbackend.rocketchat.RocketBackendV2
 import com.mkring.james.chatbackend.telegram.TelegramBackendV2
 import com.mkring.james.mapping.MappingPattern
-import com.mkring.james.prototype.*
+import com.mkring.james.prototype.ChatBackendV3
+import com.mkring.james.prototype.ChatV2
+import com.mkring.james.prototype.MappingV2
+import com.mkring.james.prototype.awaitBlocking
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.launch
 
@@ -69,19 +73,16 @@ class JamesV3(
 
     private fun createChatBackends() {
         chatConfigs.map {
-            when (it) {
-                is RocketChat -> {
-//                    RocketBackend(
-//                        websocketTarget = config.websocketTarget,
-//                        ignoreInvalidCa = config.ignoreInvalidCa,
-//                        sslVerifyHostname = config.sslVerifyHostname,
-//                        abortKeywords = mutableListOf(),
-//                        jamesName = name ?: "",
-//                        defaultAvatar = config.defaultAvatar
-//                    )
-                    TODO("RocketChat backend v2 not yet implemented")
-                }
-                is Telegram -> chatBackends += TelegramBackendV2(it.token, it.username)
+            chatBackends += when (it) {
+                is RocketChat -> RocketBackendV2(
+                    websocketTarget = it.websocketTarget,
+                    sslVerifyHostname = it.sslVerifyHostname,
+                    ignoreInvalidCa = it.ignoreInvalidCa,
+                    defaultAvatar = it.defaultAvatar,
+                    rocketUsername = it.username,
+                    rocketPassword = it.password
+                )
+                is Telegram -> TelegramBackendV2(it.token, it.username)
             }
         }
     }
