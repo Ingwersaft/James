@@ -25,7 +25,7 @@ data class OutgoingPayload(
 /**
  * TODO add info!
  */
-abstract class ChatBackendV3 {
+abstract class ChatBackend {
     val backendToJamesChannel: Channel<IncomingPayload> = Channel(10)
     val fromJamesToBackendChannel: Channel<OutgoingPayload> = Channel(10)
     abstract suspend fun start()

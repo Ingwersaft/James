@@ -1,7 +1,7 @@
 package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
-import com.mkring.james.chatbackend.ChatBackendV3
+import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.fireAndForgetLoop
 import com.neovisionaries.ws.client.WebSocket
@@ -14,14 +14,14 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-class RocketBackendV2(
+class RocketBackend(
     val websocketTarget: String,
     val sslVerifyHostname: Boolean = true,
     val ignoreInvalidCa: Boolean = false,
     var defaultAvatar: String,
     val rocketUsername: String,
     val rocketPassword: String
-) : ChatBackendV3() {
+) : ChatBackend() {
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this
     val random = Random()
@@ -31,7 +31,7 @@ class RocketBackendV2(
         ws.apply {
             connect()
             CompletableFuture<String>().let {
-                loginResultMap.put(NOID, it)
+                loginResultMap[NOID] = it
                 sendJson(mapOf("msg" to "connect", "version" to "1", "support" to listOf("1")))
                 it.get().also { log.info("connect answer: $it") }
             }
@@ -46,7 +46,7 @@ class RocketBackendV2(
             launchSubscriptionRoutine()
         }
 
-        fireAndForgetLoop("ChatBackendV3-outgoing-receiver") {
+        fireAndForgetLoop("ChatBackend-outgoing-receiver") {
             val (target, text, options) = fromJamesToBackendChannel.receive()
             ws.sendToChat(target, random.nextInt(10000), text, options.getOrDefault("avatar", defaultAvatar))
         }
@@ -278,6 +278,6 @@ class RocketBackendV2(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(RocketBackendV2::class.java)
+        private val log = LoggerFactory.getLogger(RocketBackend::class.java)
     }
 }

@@ -1,6 +1,6 @@
 package com.mkring.james.chatbackend.telegram
 
-import com.mkring.james.chatbackend.ChatBackendV3
+import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.fireAndForgetLoop
 import com.mkring.james.lg
@@ -13,15 +13,15 @@ import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.generics.BotSession
 
-private val log = LoggerFactory.getLogger(TelegramBackendV2::class.java)
-class TelegramBackendV2(val botToken: String, val botUsername: String) : ChatBackendV3() {
+private val log = LoggerFactory.getLogger(TelegramBackend::class.java)
+class TelegramBackend(val botToken: String, val botUsername: String) : ChatBackend() {
     private lateinit var session: BotSession
 
     override suspend fun start() {
         log.info("start()")
         session = TelegramBotsApi().registerBot(bot)
         // handle outgoing
-        fireAndForgetLoop("TelegramBackendV2-outgoing-receiver") {
+        fireAndForgetLoop("TelegramBackend-outgoing-receiver") {
             val (target, text, options) = fromJamesToBackendChannel.receive()
             bot.execute(SendMessage(target, text).apply {
                 options["parse_mode"]?.let {
@@ -37,8 +37,8 @@ class TelegramBackendV2(val botToken: String, val botUsername: String) : ChatBac
         log.info("TelegramLongPollingBot starting up")
         ApiContextInitializer.init()
         object : TelegramLongPollingBot() {
-            override fun getBotToken(): String = this@TelegramBackendV2.botToken
-            override fun getBotUsername(): String = this@TelegramBackendV2.botUsername
+            override fun getBotToken(): String = this@TelegramBackend.botToken
+            override fun getBotUsername(): String = this@TelegramBackend.botUsername
             // handle incoming
             override fun onUpdateReceived(update: Update?) {
                 log.debug("onUpdateReceived: $update")

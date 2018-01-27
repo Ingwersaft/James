@@ -1,10 +1,10 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.ChatBackendV3
+import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.mapping.Ask
-import com.mkring.james.mapping.MappingV2
+import com.mkring.james.mapping.Mapping
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.launch
@@ -12,10 +12,10 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-class ChatV2(
+class Chat(
     val type: String,
-    val mappings: Map<String, MappingV2.() -> Unit>,
-    val chatBackendV3: ChatBackendV3,
+    val mappings: Map<String, Mapping.() -> Unit>,
+    val chatBackend: ChatBackend,
     val abortKeywords: MutableList<String>,
     val mappingprefix: String
 ) {
@@ -24,18 +24,18 @@ class ChatV2(
     suspend fun start() {
         log.info("start() called")
         log.info("received the following mappings:\n" + mappings.map { it.key }.joinToString("\n"))
-        chatBackendV3.start()
-        log.info("ChatV2 chat started, now iterating chatBackend")
+        chatBackend.start()
+        log.info("Chat chat started, now iterating chatBackend")
         fireAndForgetLoop("receive-from-backends") {
-            chatBackendV3.backendToJamesChannel.receive().let { (uniqueChatTarget, username, text) ->
-                log.info("chatBackendV3.backendToJamesChannel received $text from $username - $uniqueChatTarget")
+            chatBackend.backendToJamesChannel.receive().let { (uniqueChatTarget, username, text) ->
+                log.info("chatBackend.backendToJamesChannel received $text from $username - $uniqueChatTarget")
                 if (callbackFutureHandled(text, uniqueChatTarget).not()) {
                     mappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
 
                     mappings.entries.filter { text.startsWith(it.key) }.firstOrNull()?.let { entry ->
                         log.info("going to handle ${entry.key}")
                         val job = launch {
-                            MappingV2(text, uniqueChatTarget, username, mappingprefix, this@ChatV2).apply {
+                            Mapping(text, uniqueChatTarget, username, mappingprefix, this@Chat).apply {
                                 entry.value.invoke(this)
                             }
                         }
@@ -56,7 +56,6 @@ class ChatV2(
                 send(OutgoingPayload(target, "aborted"))
                 askResultMap[target]?.cancel(true)
                 askResultMap.remove(target)
-                abortJob(target)
                 return true
             }
             askResultMap[target]?.complete(text)
@@ -68,7 +67,7 @@ class ChatV2(
 
     fun send(outgoingPayload: OutgoingPayload) {
         async {
-            chatBackendV3.fromJamesToBackendChannel.send(outgoingPayload)
+            chatBackend.fromJamesToBackendChannel.send(outgoingPayload)
         }.awaitBlocking()
     }
 
@@ -86,6 +85,6 @@ class ChatV2(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger("ChatV2")
+        private val log = LoggerFactory.getLogger("Chat")
     }
 }

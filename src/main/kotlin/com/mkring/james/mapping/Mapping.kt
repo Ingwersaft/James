@@ -1,6 +1,6 @@
 package com.mkring.james.mapping
 
-import com.mkring.james.ChatV2
+import com.mkring.james.Chat
 import com.mkring.james.awaitBlocking
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
@@ -10,12 +10,12 @@ import java.util.concurrent.TimeUnit
 
 data class MappingPattern(val pattern: String, val info: String)
 
-class MappingV2(
+class Mapping(
     private val commandText: String,
     private val uniqueChatTarget: UniqueChatTarget,
     val username: String?,
     private val mappingprefix: String,
-    private val parentChat: ChatV2
+    private val parentChat: Chat
 ) {
     /**
      * prefix and pattern will be present too!

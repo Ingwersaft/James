@@ -1,10 +1,10 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.ChatBackendV3
+import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import kotlinx.coroutines.experimental.delay
 
-class TestingChatBackend : ChatBackendV3() {
+class TestingChatBackend : ChatBackend() {
     override suspend fun start() {
         println("start called")
         fireAndForgetLoop("debugging") {

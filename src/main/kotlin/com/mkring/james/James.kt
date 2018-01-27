@@ -1,10 +1,13 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.*
-import com.mkring.james.chatbackend.rocketchat.RocketBackendV2
-import com.mkring.james.chatbackend.telegram.TelegramBackendV2
+import com.mkring.james.chatbackend.ChatBackend
+import com.mkring.james.chatbackend.ChatConfig
+import com.mkring.james.chatbackend.RocketChat
+import com.mkring.james.chatbackend.Telegram
+import com.mkring.james.chatbackend.rocketchat.RocketBackend
+import com.mkring.james.chatbackend.telegram.TelegramBackend
+import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
-import com.mkring.james.mapping.MappingV2
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.launch
 import org.slf4j.LoggerFactory
@@ -15,28 +18,28 @@ annotation class LimitClosureScope
 /**
  * builds and starts a James instance
  */
-fun jamesV3(init: JamesV3.() -> Unit): JamesV3 = JamesV3().also(init).autoStart()
+fun james(init: James.() -> Unit): James = James().also(init).autoStart()
 
-private val log = LoggerFactory.getLogger(JamesV3::class.java)
+private val log = LoggerFactory.getLogger(James::class.java)
 
 @LimitClosureScope
-class JamesV3(
+class James(
     var name: String? = null,
     var autoStart: Boolean = true, val abortKeywords: MutableList<String> = mutableListOf()
 ) {
-    internal val chatBackends: MutableList<ChatBackendV3> = mutableListOf()
+    internal val chatBackends: MutableList<ChatBackend> = mutableListOf()
     internal val chatConfigs: MutableList<ChatConfig> = mutableListOf()
 
-    internal val mappings: MutableMap<MappingPattern, MappingV2.() -> Unit> = mutableMapOf()
+    internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
 
-    internal val actualChats: MutableList<ChatV2> = mutableListOf()
+    internal val actualChats: MutableList<Chat> = mutableListOf()
     fun autoStart() = if (autoStart) {
         start()
     } else {
         this
     }
 
-    fun start(): JamesV3 = async {
+    fun start(): James = async {
         lg("start()")
 
         createChatBackends()
@@ -53,11 +56,11 @@ class JamesV3(
         mappings[MappingPattern(helpMappingSlash.first, "nvmd")] = helpMappingSlash.second
         log.info("going to startup ${chatBackends.size} chatBackends")
         chatBackends.forEach {
-            actualChats += ChatV2(
+            actualChats += Chat(
                 mappingprefix = mappingprefix,
                 type = it::class.java.simpleName,
                 mappings = mappings.map { "$mappingprefix${it.key.pattern}" to it.value }.toMap(),
-                abortKeywords = abortKeywords, chatBackendV3 = it
+                abortKeywords = abortKeywords, chatBackend = it
             ).also {
                 launch {
                     log.info("starting ${it.type}")
@@ -66,13 +69,13 @@ class JamesV3(
             }
         }
 
-        return@async this@JamesV3
+        return@async this@James
     }.awaitBlocking()
 
     private fun createChatBackends() {
         chatConfigs.map {
             chatBackends += when (it) {
-                is RocketChat -> RocketBackendV2(
+                is RocketChat -> RocketBackend(
                     websocketTarget = it.websocketTarget,
                     sslVerifyHostname = it.sslVerifyHostname,
                     ignoreInvalidCa = it.ignoreInvalidCa,
@@ -80,7 +83,7 @@ class JamesV3(
                     rocketUsername = it.username,
                     rocketPassword = it.password
                 )
-                is Telegram -> TelegramBackendV2(it.token, it.username)
+                is Telegram -> TelegramBackend(it.token, it.username)
             }
         }
     }
@@ -88,7 +91,7 @@ class JamesV3(
     private fun createHelpMapping(
         plainHelp: String,
         helpCommand: String
-    ): Pair<String, MappingV2.() -> Unit> {
+    ): Pair<String, Mapping.() -> Unit> {
         val lines = mutableListOf<String>()
         lines += "${name ?: "James"} at yor service:"
         lines += ""
@@ -97,7 +100,7 @@ class JamesV3(
         }
         lines += "---"
         lines += plainHelp
-        val mappingBlock: MappingV2.() -> Unit = {
+        val mappingBlock: Mapping.() -> Unit = {
             send(lines.joinToString("\n"))
         }
         return Pair(helpCommand, mappingBlock)
@@ -114,7 +117,7 @@ class JamesV3(
      *  Will be used like `text.matches(Regex("^" + pattern + ".*", RegexOption.IGNORE_CASE))`
      *  @param helptext Text used when help gets build and sent
      */
-    fun map(pattern: String, helptext: String, block: MappingV2.() -> Unit) {
+    fun map(pattern: String, helptext: String, block: Mapping.() -> Unit) {
         lg("map() for pattern=$pattern helptext=$helptext")
         mappings[MappingPattern(pattern, helptext)] = block
     }
@@ -137,7 +140,7 @@ class JamesV3(
      * Use mappings of other James instance (uses only mappings, no other config )
      * Hint: Create other James instances with autoStart disabled
      */
-    fun use(other: JamesV3) {
+    fun use(other: James) {
         other.mappings.forEach { p, block ->
             map(p.pattern, p.info, block)
         }
@@ -147,13 +150,13 @@ class JamesV3(
      * If you need something other than the default backends, provide your own one
      * !Important! You have to interact with both io-channels:
      *
-     * [ChatBackendV3.backendToJamesChannel]: When your backend receives messages, you have to forward it
+     * [ChatBackend.backendToJamesChannel]: When your backend receives messages, you have to forward it
      * to this channel. James will process them.
      *
-     * [ChatBackendV3.fromJamesToBackendChannel]: You must! receive messaged on this channel. This is the channel
+     * [ChatBackend.fromJamesToBackendChannel]: You must! receive messaged on this channel. This is the channel
      * for James to send something back to the backend caller. This is best handled in a backend thread or coroutine
      */
-    fun addCustomChatBackend(custom: ChatBackendV3) {
+    fun addCustomChatBackend(custom: ChatBackend) {
         chatBackends += custom
     }
 }
