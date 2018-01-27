@@ -1,10 +1,9 @@
 package com.mkring.james.chatbackend.telegram
 
+import com.mkring.james.chatbackend.ChatBackendV3
+import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.chatbackend.lg
-import com.mkring.james.chatbackend.log
-import com.mkring.james.prototype.ChatBackendV3
-import com.mkring.james.prototype.IncomingPayload
-import com.mkring.james.prototype.fireAndForgetLoop
+import com.mkring.james.fireAndForgetLoop
 import kotlinx.coroutines.experimental.launch
 import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.ApiContextInitializer
@@ -14,8 +13,7 @@ import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.generics.BotSession
 
-private val log = LoggerFactory.getLogger("TelegramBackendV2")
-
+private val log = LoggerFactory.getLogger(TelegramBackendV2::class.java)
 class TelegramBackendV2(val botToken: String, val botUsername: String) : ChatBackendV3() {
     private lateinit var session: BotSession
 

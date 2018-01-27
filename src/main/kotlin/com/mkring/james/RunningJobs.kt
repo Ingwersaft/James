@@ -10,7 +10,7 @@ object RunningJobs {
     val running = mutableMapOf<UniqueChatTarget, Job>()
 }
 
-val log = LoggerFactory.getLogger("RunningJobs")
+private val log = LoggerFactory.getLogger("RunningJobs")
 fun abortJob(key: UniqueChatTarget) {
     log.info("going to abort job for target $key")
     RunningJobs.running[key]?.let {

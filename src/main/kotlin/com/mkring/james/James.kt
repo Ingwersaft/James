@@ -6,8 +6,7 @@ import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
 
-@DslMarker
-annotation class LimitClosureScope
+
 
 /**
  * builds and starts a James instance

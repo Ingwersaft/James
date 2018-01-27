@@ -1,9 +1,9 @@
 package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
-import com.mkring.james.prototype.ChatBackendV3
-import com.mkring.james.prototype.IncomingPayload
-import com.mkring.james.prototype.fireAndForgetLoop
+import com.mkring.james.chatbackend.ChatBackendV3
+import com.mkring.james.chatbackend.IncomingPayload
+import com.mkring.james.fireAndForgetLoop
 import com.neovisionaries.ws.client.WebSocket
 import com.neovisionaries.ws.client.WebSocketAdapter
 import com.neovisionaries.ws.client.WebSocketFactory

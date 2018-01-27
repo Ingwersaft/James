@@ -37,7 +37,7 @@ fun Any.lg(toBeLogged: Any) {
     }
 }
 
-val log = LoggerFactory.getLogger(ChatBackend::class.java)
+private val log = LoggerFactory.getLogger(ChatBackend::class.java)
 fun launchFirstMatchingMapping(
     text: String, uniqueChatTarget: String, username: String?, chat: ChatBackend,
     chatLogicMappings: Map<String, Mapping.() -> Unit>

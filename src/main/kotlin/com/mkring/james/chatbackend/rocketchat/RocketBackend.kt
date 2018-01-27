@@ -25,7 +25,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
                     ignoreInvalidCa: Boolean = false,
                     override val abortKeywords: MutableList<String>,
                     override val jamesName: String, var defaultAvatar: String) : ChatBackend {
-    val log = LoggerFactory.getLogger(javaClass)
+    private val log = LoggerFactory.getLogger(javaClass)
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this
     val random = Random()

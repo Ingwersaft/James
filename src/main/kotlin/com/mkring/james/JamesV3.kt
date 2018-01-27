@@ -1,23 +1,23 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.ChatConfig
-import com.mkring.james.chatbackend.RocketChat
-import com.mkring.james.chatbackend.Telegram
-import com.mkring.james.chatbackend.lg
+import com.mkring.james.chatbackend.*
 import com.mkring.james.chatbackend.rocketchat.RocketBackendV2
 import com.mkring.james.chatbackend.telegram.TelegramBackendV2
 import com.mkring.james.mapping.MappingPattern
-import com.mkring.james.prototype.ChatBackendV3
-import com.mkring.james.prototype.ChatV2
-import com.mkring.james.prototype.MappingV2
-import com.mkring.james.prototype.awaitBlocking
+import com.mkring.james.mapping.MappingV2
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.launch
+import org.slf4j.LoggerFactory
+
+@DslMarker
+annotation class LimitClosureScope
 
 /**
  * builds and starts a James instance
  */
 fun jamesV3(init: JamesV3.() -> Unit): JamesV3 = JamesV3().also(init).autoStart()
+
+private val log = LoggerFactory.getLogger(JamesV3::class.java)
 
 @LimitClosureScope
 class JamesV3(
@@ -28,8 +28,6 @@ class JamesV3(
     internal val chatConfigs: MutableList<ChatConfig> = mutableListOf()
 
     internal val mappings: MutableMap<MappingPattern, MappingV2.() -> Unit> = mutableMapOf()
-
-    private var additionalChatOptions: Map<String, String> = emptyMap()
 
     internal val actualChats: MutableList<ChatV2> = mutableListOf()
     fun autoStart() = if (autoStart) {
