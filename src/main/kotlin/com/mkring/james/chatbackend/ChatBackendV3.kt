@@ -2,6 +2,8 @@ package com.mkring.james.chatbackend
 
 import kotlinx.coroutines.experimental.channels.Channel
 
+typealias UniqueChatTarget = String
+
 /**
  * TODO add info!
  */

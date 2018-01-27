@@ -3,7 +3,6 @@ package com.mkring.james
 import com.mkring.james.chatbackend.ChatBackendV3
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.isIn
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.MappingV2
 import kotlinx.coroutines.experimental.Job

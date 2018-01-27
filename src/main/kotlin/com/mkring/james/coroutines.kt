@@ -20,3 +20,13 @@ suspend fun fireAndForgetLoop(name: String, block: suspend CoroutineScope.() -> 
 }.also {
     fireAndForgetLoopLog.info("launched $name")
 }
+
+fun Any.lg(toBeLogged: Any) {
+    LoggerFactory.getLogger(this::class.java).apply {
+        this.info(toBeLogged.toString())
+    }
+}
+
+internal infix fun String.isIn(abortKeywords: List<String>): Boolean {
+    return abortKeywords.contains(this)
+}

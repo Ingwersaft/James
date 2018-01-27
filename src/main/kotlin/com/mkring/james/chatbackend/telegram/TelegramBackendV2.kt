@@ -2,8 +2,8 @@ package com.mkring.james.chatbackend.telegram
 
 import com.mkring.james.chatbackend.ChatBackendV3
 import com.mkring.james.chatbackend.IncomingPayload
-import com.mkring.james.chatbackend.lg
 import com.mkring.james.fireAndForgetLoop
+import com.mkring.james.lg
 import kotlinx.coroutines.experimental.launch
 import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.ApiContextInitializer

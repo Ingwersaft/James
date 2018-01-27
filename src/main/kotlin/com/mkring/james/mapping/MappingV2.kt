@@ -4,7 +4,7 @@ import com.mkring.james.ChatV2
 import com.mkring.james.awaitBlocking
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.lg
+import com.mkring.james.lg
 import kotlinx.coroutines.experimental.async
 import java.util.concurrent.TimeUnit
 
