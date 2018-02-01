@@ -43,7 +43,7 @@ class Chat(
                         runningJobs[uniqueChatTarget] = job
                         return@fireAndForgetLoop
                     }
-                    log.debug("nothing found for $text from $uniqueChatTarget")
+                    log.trace("nothing found for $text from $uniqueChatTarget")
                 }
             }
         }
