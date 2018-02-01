@@ -26,8 +26,11 @@ class RocketBackend(
     val NOID = -1 // if method doesn't support a unique id, use this
     val random = Random()
 
-    suspend override fun start() {
+    override suspend fun start() {
         log.info("start()")
+
+        setupWs()
+
         ws.apply {
             connect()
             CompletableFuture<String>().let {
@@ -53,8 +56,11 @@ class RocketBackend(
     }
 
     var loginResultMap: MutableMap<Int, CompletableFuture<String>> = mutableMapOf()
-    val ws: WebSocket by lazy {
-        WebSocketFactory().also {
+
+    lateinit var ws: WebSocket
+
+    fun setupWs() {
+        ws = WebSocketFactory().also {
             if (ignoreInvalidCa) {
                 it.sslContext = NaiveSSLContext.getInstance("TLS")
             }
@@ -153,13 +159,13 @@ class RocketBackend(
     private fun launchSubscriptionRoutine() {
         launch {
             while (true) {
-                log.info("checking for new subs")
+                log.debug("checking for new subs")
                 try {
                     getBotSubscriptionsAndSubscribe()
                 } catch (e: Exception) {
                     log.error("checking subs failed", e)
                 }
-                log.info("checking done")
+                log.debug("checking done")
                 delay(2, TimeUnit.SECONDS)
             }
         }
@@ -171,9 +177,9 @@ class RocketBackend(
      */
     private fun getBotSubscriptionsAndSubscribe() {
         var allAvailableStreams = gson.fromJson(callAndWait("subscriptions/get"), AvailableStreamsAnswer::class.java)
-            .also { log.info(it.toString()) }
+            .also { log.debug(it.toString()) }
 
-        log.info("allAvailableStreams: $allAvailableStreams")
+        log.debug("allAvailableStreams: $allAvailableStreams")
         allAvailableStreams?.let {
             it.result?.forEach { result ->
                 result.rid?.let {

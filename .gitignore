@@ -17,3 +17,4 @@ out/
 *.iml
 /src/main/kotlin/Ignore.kt
 **/TelegramDebugDelete.kt
+/src/test/kotlin/Ignore.kt
