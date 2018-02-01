@@ -66,7 +66,7 @@ class Chat(
     }
 
     fun send(outgoingPayload: OutgoingPayload) {
-        async {
+        async(JamesPool) {
             chatBackend.fromJamesToBackendChannel.send(outgoingPayload)
         }.awaitBlocking()
     }

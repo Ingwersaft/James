@@ -1,6 +1,7 @@
 package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
+import com.mkring.james.JamesPool
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.fireAndForgetLoop
@@ -138,7 +139,7 @@ class RocketBackend(
                             log.info("'$text' from rid=$rid")
                             log.info("found Streamupdate : $it")
 
-                            launch {
+                            launch(JamesPool) {
                                 backendToJamesChannel.send(IncomingPayload(rid, username, text))
                             }
                         }
@@ -157,7 +158,7 @@ class RocketBackend(
      * subscribed
      */
     private fun launchSubscriptionRoutine() {
-        launch {
+        launch(JamesPool) {
             while (true) {
                 log.debug("checking for new subs")
                 try {

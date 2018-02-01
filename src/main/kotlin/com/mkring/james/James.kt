@@ -39,7 +39,7 @@ class James(
         this
     }
 
-    fun start(): James = async {
+    fun start(): James = async(JamesPool) {
         lg("start()")
 
         createChatBackends()

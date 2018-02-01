@@ -1,6 +1,7 @@
 package com.mkring.james.mapping
 
 import com.mkring.james.Chat
+import com.mkring.james.JamesPool
 import com.mkring.james.awaitBlocking
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
@@ -54,7 +55,7 @@ class Mapping(
      * Send some text to the chat counterpart
      */
     fun send(text: String, options: Map<String, String> = emptyMap()) {
-        async {
+        async(JamesPool) {
             parentChat.send(OutgoingPayload(uniqueChatTarget, text, options))
         }.awaitBlocking()
     }
