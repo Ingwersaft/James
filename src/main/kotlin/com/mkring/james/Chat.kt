@@ -32,7 +32,7 @@ class Chat(
                 if (callbackFutureHandled(text, uniqueChatTarget).not()) {
                     mappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
 
-                    mappings.entries.filter { text.startsWith(it.key) }.firstOrNull()?.let { entry ->
+                    mappings.entries.firstOrNull { text.startsWith(it.key) }?.let { entry ->
                         log.info("going to handle ${entry.key}")
                         val job = launch {
                             Mapping(text, uniqueChatTarget, username, mappingprefix, this@Chat).apply {
@@ -40,10 +40,10 @@ class Chat(
                             }
                         }
                         log.info("launch done")
-                        runningJobs.put(uniqueChatTarget, job)
-                    } ?: let {
-                        log.debug("nothing found for $text from $uniqueChatTarget")
+                        runningJobs[uniqueChatTarget] = job
+                        return@fireAndForgetLoop
                     }
+                    log.debug("nothing found for $text from $uniqueChatTarget")
                 }
             }
         }
