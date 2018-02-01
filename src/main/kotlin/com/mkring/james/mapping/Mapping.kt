@@ -12,7 +12,7 @@ data class MappingPattern(val pattern: String, val info: String)
 
 class Mapping(
     private val commandText: String,
-    private val uniqueChatTarget: UniqueChatTarget,
+    val uniqueChatTarget: UniqueChatTarget,
     val username: String?,
     private val mappingprefix: String,
     private val parentChat: Chat
