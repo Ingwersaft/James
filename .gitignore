@@ -18,3 +18,6 @@ out/
 /src/main/kotlin/Ignore.kt
 **/TelegramDebugDelete.kt
 /src/test/kotlin/Ignore.kt
+/src/test/kotlin/com/mkring/james/RocketchatDebug.kt
+/test-rocketchat/data/
+/test-rocketchat/uploads/

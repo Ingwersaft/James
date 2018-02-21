@@ -8,8 +8,8 @@ import com.mkring.james.fireAndForgetLoop
 import com.neovisionaries.ws.client.WebSocket
 import com.neovisionaries.ws.client.WebSocketAdapter
 import com.neovisionaries.ws.client.WebSocketFactory
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
+import com.neovisionaries.ws.client.WebSocketFrame
+import kotlinx.coroutines.experimental.*
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -26,42 +26,23 @@ class RocketBackend(
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this
     val random = Random()
+    //
+    private var loginResultMap: MutableMap<Int, CompletableFuture<String>> = mutableMapOf()
+
+    lateinit var ws: WebSocket
+    lateinit var outgoingJob: Job
+    lateinit var subJob: Job
+    private val subbedRoomIds = mutableSetOf<String>() // subbed room id cache
+
+    //
 
     override suspend fun start() {
         log.info("start()")
-
-        setupWs()
-
-        ws.apply {
-            connect()
-            CompletableFuture<String>().let {
-                loginResultMap[NOID] = it
-                sendJson(mapOf("msg" to "connect", "version" to "1", "support" to listOf("1")))
-                it.get().also { log.info("connect answer: $it") }
-            }
-
-            Thread.sleep(100L) // needed cause future with NOID
-
-            log.info("going to auth with plain user/pass:")
-            if (!loginMethod()) {
-                return
-            }
-
-            launchSubscriptionRoutine()
-        }
-
-        fireAndForgetLoop("ChatBackend-outgoing-receiver") {
-            val (target, text, options) = fromJamesToBackendChannel.receive()
-            ws.sendToChat(target, random.nextInt(10000), text, options.getOrDefault("avatar", defaultAvatar))
-        }
+        ws = createWebsocket()
     }
 
-    var loginResultMap: MutableMap<Int, CompletableFuture<String>> = mutableMapOf()
-
-    lateinit var ws: WebSocket
-
-    fun setupWs() {
-        ws = WebSocketFactory().also {
+    fun createWebsocket(): WebSocket = runBlocking {
+        WebSocketFactory().also {
             if (ignoreInvalidCa) {
                 it.sslContext = NaiveSSLContext.getInstance("TLS")
             }
@@ -147,45 +128,105 @@ class RocketBackend(
                         log.error(e.message)
                     }
                 }
+
+                override fun onDisconnected(
+                    websocket: WebSocket?,
+                    serverCloseFrame: WebSocketFrame?,
+                    clientCloseFrame: WebSocketFrame?,
+                    closedByServer: Boolean
+                ) {
+                    log.info("onDisconnected (byserver=$closedByServer): $serverCloseFrame $clientCloseFrame")
+                    var successfullyReconnected = false
+                    while (successfullyReconnected.not()) {
+                        try {
+                            runBlocking {
+                                loginResultMap.clear()
+                                subbedRoomIds.clear()
+                                outgoingJob.cancelAndJoin()
+                                subJob.cancelAndJoin()
+                            }
+                            ws.clearListeners()
+                            ws.flush()
+                            ws = createWebsocket()
+                            successfullyReconnected = true
+                        } catch (e: Exception) {
+                            log.error("onDisconnected recreate connect error", e)
+                            Thread.sleep(5000)
+                        }
+                    }
+                    log.info("maybe reconnected successfully")
+                }
             })
+            if (it.doRocketchatAuth()) throw IllegalStateException("connect failed")
+
+            launchSubscriptionRoutine(it)
+
+            async {
+                outgoingJob = fireAndForgetLoop("ChatBackend-outgoing-receiver") {
+                    val (target, text, options) = fromJamesToBackendChannel.receive()
+                    it.sendToChat(
+                        target,
+                        random.nextInt(10000),
+                        text,
+                        options.getOrDefault("avatar", defaultAvatar)
+                    )
+                }
+            }
             it.isMissingCloseFrameAllowed = true
             it.pingInterval = 25 * 1000
         }
+    }
+
+    private fun WebSocket.doRocketchatAuth(): Boolean {
+        connect()
+        CompletableFuture<String>().let {
+            loginResultMap[NOID] = it
+            sendJson(mapOf("msg" to "connect", "version" to "1", "support" to listOf("1")))
+            it.get().also { log.info("connect answer: $it") }
+        }
+
+        Thread.sleep(100L) // needed cause future with NOID
+
+        log.info("going to auth with plain user/pass:")
+        if (!loginMethod(this)) {
+            return true
+        }
+        return false
     }
 
     /**
      * launches corouting which checks for all known subs of the botaccount in use and subscribes to all if not already
      * subscribed
      */
-    private fun launchSubscriptionRoutine() {
-        launch(JamesPool) {
+    private fun launchSubscriptionRoutine(webSocket: WebSocket) {
+        subJob = launch(JamesPool) {
             while (true) {
-                log.debug("checking for new subs")
+                log.trace("checking for new subs")
                 try {
-                    getBotSubscriptionsAndSubscribe()
+                    getBotSubscriptionsAndSubscribe(webSocket)
                 } catch (e: Exception) {
                     log.error("checking subs failed", e)
                 }
-                log.debug("checking done")
+                log.trace("checking done")
                 delay(2, TimeUnit.SECONDS)
             }
         }
     }
 
-    private val subbedRoomIds = mutableSetOf<String>() // subbed room id cache
     /**
      * the actual subscribtion logic
      */
-    private fun getBotSubscriptionsAndSubscribe() {
-        var allAvailableStreams = gson.fromJson(callAndWait("subscriptions/get"), AvailableStreamsAnswer::class.java)
-            .also { log.debug(it.toString()) }
+    private fun getBotSubscriptionsAndSubscribe(webSocket: WebSocket) {
+        var allAvailableStreams =
+            gson.fromJson(callAndWait("subscriptions/get", webSocket = webSocket), AvailableStreamsAnswer::class.java)
+                .also { log.debug(it.toString()) }
 
-        log.debug("allAvailableStreams: $allAvailableStreams")
+        log.trace("allAvailableStreams: $allAvailableStreams")
         allAvailableStreams?.let {
             it.result?.forEach { result ->
                 result.rid?.let {
                     if (subbedRoomIds.contains(it)) {
-                        log.debug("already subbed to rid $it")
+                        log.trace("already subbed to rid $it")
                         return@forEach
                     }
                     ws.sendJson(
@@ -194,14 +235,15 @@ class RocketBackend(
                             "params" to arrayOf(it, false)
                         )
                     )
+                    log.info("subbedto new room: $it")
                     subbedRoomIds.add(it)
                 }
             }
         }
     }
 
-    private fun loginMethod(): Boolean {
-        callAndWait(
+    private fun loginMethod(webSocket: WebSocket): Boolean {
+        callAndWait(            webSocket = webSocket,
             method = "login", objects = arrayOf(
                 mapOf(
                     "user" to mapOf("username" to rocketUsername),
@@ -211,31 +253,35 @@ class RocketBackend(
         ).also {
             if (it == null) {
                 log.error("no response after login")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             }
             if (it.contains("User not found")) {
                 log.error("couldn't login, user not found - disconnected!")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             } else if (it.contains("Incorrect password")) {
                 log.error("couldn't login, incorrect password - disconnected!")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             } else if (it.contains("Meteor.Error")) {
                 log.error("meteor error, username password correct?")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             }
         }
         return true
     }
 
-    private fun callAndWait(method: String, objects: Array<Any> = emptyArray()): String? {
+    private fun callAndWait(
+        method: String,
+        objects: Array<Any> = emptyArray(),
+        webSocket: WebSocket
+    ): String? {
         CompletableFuture<String>().let {
             val uuid = random.nextInt(10000)
             loginResultMap.put(uuid, it)
-            ws.call(method, uuid, objects)
+            webSocket.call(method, uuid, objects)
             it.get().also {
                 log.info("got $method answer: $it")
                 return it
