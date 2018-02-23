@@ -21,3 +21,4 @@ out/
 /src/test/kotlin/com/mkring/james/RocketchatDebug.kt
 /test-rocketchat/data/
 /test-rocketchat/uploads/
+**/PillomatTest.kt

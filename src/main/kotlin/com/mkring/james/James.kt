@@ -1,9 +1,6 @@
 package com.mkring.james
 
-import com.mkring.james.chatbackend.ChatBackend
-import com.mkring.james.chatbackend.ChatConfig
-import com.mkring.james.chatbackend.RocketChat
-import com.mkring.james.chatbackend.Telegram
+import com.mkring.james.chatbackend.*
 import com.mkring.james.chatbackend.rocketchat.RocketBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
@@ -25,7 +22,8 @@ private val log = LoggerFactory.getLogger(James::class.java)
 @LimitClosureScope
 class James(
     var name: String? = null,
-    var autoStart: Boolean = true, val abortKeywords: MutableList<String> = mutableListOf()
+    var autoStart: Boolean = true,
+    val abortKeywords: MutableList<String> = mutableListOf()
 ) {
     internal val chatBackends: MutableList<ChatBackend> = mutableListOf()
     internal val chatConfigs: MutableList<ChatConfig> = mutableListOf()
@@ -39,6 +37,12 @@ class James(
         this
     }
 
+    /**
+     * check if james started
+     */
+    fun isStarted() = started
+
+    private var started: Boolean = false
     fun start(): James = async(JamesPool) {
         lg("start()")
 
@@ -68,7 +72,7 @@ class James(
                 }
             }
         }
-
+        started = true
         return@async this@James
     }.awaitBlocking()
 
@@ -158,6 +162,24 @@ class James(
      */
     fun addCustomChatBackend(custom: ChatBackend) {
         chatBackends += custom
+    }
+
+    /**
+     * If you need to initiate a conversation you can use this method (if james started already)
+     *
+     * @param uniqueChatTarget target chat for which conversation shall be started
+     * @param mappingLogic your logic for this conversation
+     */
+    fun initiateConversation(uniqueChatTarget: UniqueChatTarget, mappingLogic: Mapping.() -> Unit) {
+        log.info("initiateConversation to $uniqueChatTarget")
+        if (started.not()) {
+            throw IllegalAccessError("james isn't started yet!")
+        }
+        actualChats.forEach {
+            Mapping("<initiateConversation>", uniqueChatTarget, null, "<initiateConversation>", it).apply {
+                mappingLogic()
+            }
+        }
     }
 }
 
