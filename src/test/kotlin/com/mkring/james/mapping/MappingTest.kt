@@ -1,5 +1,6 @@
 package com.mkring.james.mapping
 
+import com.mkring.james.James
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.chatbackend.OutgoingPayload
@@ -8,6 +9,7 @@ import com.mkring.james.fireAndForgetLoop
 import com.mkring.james.james
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.experimental.CompletableDeferred
 import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.Test
@@ -47,18 +49,60 @@ class MappingTest {
     }
 
     @Test
-    fun testGeneratedHelpWithJamesUsername() {
-        TODO("implement me")
+    fun testGeneratedHelpWithJamesUsername() = runBlocking {
+        createHelloWorldTestJames {
+            name = "test-me"
+        }
+        testBackend.send("help") // ignored cause name is test-me
+        testBackend.send("test-me help")
+        waitForAnswers(testBackend, 1)
+        testBackend.outgoing.first().let {
+            assertEquals(
+                """
+                    |test-me at yor service:
+                    |
+                    |---
+                    |test-me hello - returns world
+                    |""".trimMargin().trim(), it.text
+            )
+        }
     }
 
     @Test
-    fun testMultipleSend() {
-        TODO("implement me")
+    fun testMultipleSend() = runBlocking {
+        createHelloWorldTestJames {
+            map("multiple", "nvmd") {
+                send("a")
+                send("b")
+            }
+        }
+        testBackend.send("multiple")
+        waitForAnswers(testBackend, 2)
+        testBackend.outgoing.joinToString(";") { it.text }.let {
+            assertEquals("a;b", it)
+        }
     }
 
     @Test
-    fun testAsk() {
-        TODO("implement me")
+    fun testAsk() = runBlocking {
+        val gotAnswer = CompletableDeferred<String>()
+        createHelloWorldTestJames {
+            map("ask", "nvmd") {
+                ask("something?").get().let {
+                    gotAnswer.complete(it)
+                }
+                send("alright")
+            }
+        }
+        testBackend.send("ask")
+        waitForAnswers(testBackend, 1)
+        testBackend.send("answer")
+        waitForAnswers(testBackend, 2)
+        assertEquals("answer",gotAnswer.await())
+        testBackend.outgoing.joinToString(";") { it.text }.let {
+            assertEquals("something?;alright", it)
+        }
+
     }
 
     @Test
@@ -76,8 +120,9 @@ class MappingTest {
         TODO("implement me")
     }
 
-    private fun createHelloWorldTestJames() {
+    private fun createHelloWorldTestJames(addition: James.() -> Unit = {}) {
         james {
+            addition()
             addCustomChatBackend(testBackend)
             map("hello", "returns world") {
                 send("world, dear $username")
@@ -106,7 +151,7 @@ class TestBackend : ChatBackend() {
 
 }
 
-suspend fun waitForAnswers(testBackend: TestBackend, answerAmount: Int, times: Int = 10, duration: Long = 10) {
+suspend fun waitForAnswers(testBackend: TestBackend, answerAmount: Int, times: Int = 20, duration: Long = 10) {
     var waits = 0
     while (testBackend.outgoing.size != answerAmount) {
         delay(duration)
