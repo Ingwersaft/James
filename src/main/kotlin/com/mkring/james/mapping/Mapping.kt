@@ -19,7 +19,10 @@ class Mapping(
     private val parentChat: Chat
 ) {
     /**
-     * prefix and pattern will be present too!
+     * pattern will be present too, but not james name!
+     *
+     * james test arg1 arg2 -> [test,arg1,arg2]
+     * test arg1 arg2       -> [test,arg1,arg2]
      */
     val arguments by lazy {
         lg("commandText=$commandText username=$username")
@@ -39,17 +42,17 @@ class Mapping(
     /**
      * If you ask with retries, this will be printed when the predicate is false
      */
-    val wrongAnswerText = "incompatible answer!"
+    var wrongAnswerText = "incompatible answer!"
 
     /**
      *  If you ask with retries, this will be printed when a timeout happens
      */
-    val timeoutText = "timeout!"
+    var timeoutText = "timeout!"
 
     /**
      * If you ask with retries and all failed, this will be printed
      */
-    val askWithRetryFailedText = "well, nevermind then"
+    var askWithRetryFailedText = "well, nevermind then"
 
     /**
      * Send some text to the chat counterpart

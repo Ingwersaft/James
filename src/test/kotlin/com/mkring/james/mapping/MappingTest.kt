@@ -14,6 +14,7 @@ import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.runBlocking
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 
 class MappingTest {
     val log = LoggerFactory.getLogger(MappingTest::class.java)
@@ -98,7 +99,7 @@ class MappingTest {
         waitForAnswers(testBackend, 1)
         testBackend.send("answer")
         waitForAnswers(testBackend, 2)
-        assertEquals("answer",gotAnswer.await())
+        assertEquals("answer", gotAnswer.await())
         testBackend.outgoing.joinToString(";") { it.text }.let {
             assertEquals("something?;alright", it)
         }
@@ -106,18 +107,89 @@ class MappingTest {
     }
 
     @Test
-    fun testAskWithRetry() {
-        TODO("implement me")
+    fun testAskWithRetry() = runBlocking {
+        val gotAnswer = CompletableDeferred<String>()
+        createHelloWorldTestJames {
+            map("ask", "nvmd") {
+                askWithRetry(2, "something?") { it == "second-try" }.get().let {
+                    gotAnswer.complete(it)
+                }
+                send("alright")
+            }
+        }
+        testBackend.send("ask")
+        waitForAnswers(testBackend, 1)
+        testBackend.send("answer")
+        waitForAnswers(testBackend, 2)
+        testBackend.send("second-try")
+        waitForAnswers(testBackend, 3)
+        assertEquals("second-try", gotAnswer.await())
+        waitForAnswers(testBackend, 4)
+        testBackend.outgoing.joinToString(";") { it.text }.let {
+            assertEquals("something?;incompatible answer!;something?;alright", it)
+        }
+
+    }
+
+
+    @Test
+    fun testAskWithTimeout() = runBlocking {
+        createHelloWorldTestJames {
+            map("ask", "") {
+                askTimeout = 1
+                timeUnit = TimeUnit.MILLISECONDS
+                val ask = ask("i don't expect anything:?")
+                send((ask == Ask.Timeout).toString())
+                send("done")
+            }
+        }
+        testBackend.send("ask")
+        waitForAnswers(testBackend, 3)
+        assertEquals("i don't expect anything:?;true;done", testBackend.outgoing.joinToString(";") { it.text })
     }
 
     @Test
-    fun testAskWithTimeout() {
-        TODO("implement me")
+    fun testAskWithRetryAndTimeout() = runBlocking {
+        createHelloWorldTestJames {
+            map("ask", "") {
+                askTimeout = 1
+                timeUnit = TimeUnit.MILLISECONDS
+                timeoutText = "i'm waiting"
+                val ask = askWithRetry(1, "i don't expect anything:?") { true }
+                send((ask == Ask.Timeout).toString())
+                send("done")
+            }
+        }
+        testBackend.send("ask")
+        waitForAnswers(testBackend, 7)
+        assertEquals("i don't expect anything:?;i'm waiting;i don't expect anything:?;i'm waiting;well, nevermind then;true;done",
+            testBackend.outgoing.joinToString(";") { it.text })
+
     }
 
     @Test
-    fun testArgumentsParsing() {
-        TODO("implement me")
+    fun testArgumentsParsingWithoutName() = runBlocking {
+        createHelloWorldTestJames {
+            map("witharguments", "") {
+                send(arguments.joinToString(";"))
+            }
+        }
+        testBackend.send("witharguments arg1 arg2 arg3")
+        waitForAnswers(testBackend, 1)
+        assertEquals("witharguments;arg1;arg2;arg3", testBackend.outgoing.first().text)
+    }
+
+    @Test
+    fun testArgumentsParsingWithName() = runBlocking {
+        createHelloWorldTestJames {
+            name = "someone"
+            map("witharguments", "") {
+                send(arguments.joinToString(";"))
+            }
+        }
+        testBackend.send("someone witharguments arg1 arg2 arg3")
+        waitForAnswers(testBackend, 1)
+        assertEquals("witharguments;arg1;arg2;arg3", testBackend.outgoing.first().text)
     }
 
     private fun createHelloWorldTestJames(addition: James.() -> Unit = {}) {
