@@ -22,3 +22,6 @@ out/
 /test-rocketchat/data/
 /test-rocketchat/uploads/
 **/PillomatTest.kt
+**/DeleteMe.kt
+/docker-compose.yml
+/data/

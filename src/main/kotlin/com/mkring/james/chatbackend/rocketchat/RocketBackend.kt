@@ -34,8 +34,6 @@ class RocketBackend(
     lateinit var subJob: Job
     private val subbedRoomIds = mutableSetOf<String>() // subbed room id cache
 
-    //
-
     override suspend fun start() {
         log.info("start()")
         ws = createWebsocket()
@@ -177,7 +175,7 @@ class RocketBackend(
         }
     }
 
-    private fun WebSocket.doRocketchatAuth(): Boolean {
+    internal fun WebSocket.doRocketchatAuth(): Boolean {
         connect()
         CompletableFuture<String>().let {
             loginResultMap[NOID] = it
@@ -216,7 +214,7 @@ class RocketBackend(
     /**
      * the actual subscribtion logic
      */
-    private fun getBotSubscriptionsAndSubscribe(webSocket: WebSocket) {
+    internal fun getBotSubscriptionsAndSubscribe(webSocket: WebSocket) {
         var allAvailableStreams =
             gson.fromJson(callAndWait("subscriptions/get", webSocket = webSocket), AvailableStreamsAnswer::class.java)
                 .also { log.debug(it.toString()) }
@@ -242,8 +240,9 @@ class RocketBackend(
         }
     }
 
-    private fun loginMethod(webSocket: WebSocket): Boolean {
-        callAndWait(            webSocket = webSocket,
+    internal fun loginMethod(webSocket: WebSocket): Boolean {
+        callAndWait(
+            webSocket = webSocket,
             method = "login", objects = arrayOf(
                 mapOf(
                     "user" to mapOf("username" to rocketUsername),
@@ -273,7 +272,7 @@ class RocketBackend(
         return true
     }
 
-    private fun callAndWait(
+    internal fun callAndWait(
         method: String,
         objects: Array<Any> = emptyArray(),
         webSocket: WebSocket
