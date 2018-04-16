@@ -52,6 +52,8 @@ class RocketChatBackendV2(
             info("looks like the socket is closed, will refresh")
             try {
                 subbedRoomIds.clear()
+                loginResultMap.values.forEach { it.cancel(true) }
+                loginResultMap.clear()
                 webSocket = connectToRocketChat()
             } catch (e: Exception) {
                 error("reconnect-backend-timer failed", e)
@@ -60,17 +62,24 @@ class RocketChatBackendV2(
     }
     val timer2 = kotlin.concurrent.timer("check-subs", true, 10000, 2000) {
         info("checking for new subs")
-        try {
-            while (::webSocket.isInitialized.not()) {
-                trace("webSocket not initialized")
-                Thread.sleep(100)
+        if (::webSocket.isInitialized.not()) {
+            return@timer
+        }
+        if (webSocket.state == WebSocketState.OPEN) {
+            try {
+                while (::webSocket.isInitialized.not()) {
+                    trace("webSocket not initialized")
+                    Thread.sleep(100)
+                }
+                if (webSocket.state != WebSocketState.OPEN) {
+                    throw IllegalStateException("webSocket.state != WebSocketState.OPEN")
+                }
+                getBotSubscriptionsAndSubscribe()
+            } catch (e: Exception) {
+                error("checking subs failed", e)
             }
-            if (webSocket.state != WebSocketState.OPEN) {
-                throw IllegalStateException("webSocket.state != WebSocketState.OPEN")
-            }
-            getBotSubscriptionsAndSubscribe()
-        } catch (e: Exception) {
-            error("checking subs failed", e)
+        } else {
+            info("won't update cause socket not open")
         }
         trace("checking done")
     }
@@ -263,7 +272,7 @@ class RocketChatBackendV2(
     ): String? {
         CompletableFuture<String>().let {
             val uuid = random.nextInt(10000)
-            loginResultMap.put(uuid, it)
+            loginResultMap[uuid] = it
             webSocket.call(method, uuid, objects)
             it.get().also {
                 info("got $method answer: $it")
