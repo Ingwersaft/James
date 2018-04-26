@@ -12,6 +12,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 class RocketChatBackendV2(
     val websocketTarget: String,
@@ -270,14 +271,19 @@ class RocketChatBackendV2(
         objects: Array<Any> = emptyArray(),
         webSocket: WebSocket
     ): String? {
-        CompletableFuture<String>().let {
-            val uuid = random.nextInt(10000)
-            loginResultMap[uuid] = it
-            webSocket.call(method, uuid, objects)
-            it.get().also {
-                info("got $method answer: $it")
-                return it
+        try {
+            CompletableFuture<String>().let {
+                val uuid = random.nextInt(10000)
+                loginResultMap[uuid] = it
+                webSocket.call(method, uuid, objects)
+                it.get(10, TimeUnit.SECONDS).also {
+                    info("got $method answer: $it")
+                    return it
+                }
             }
+        } catch (e: Exception) {
+            error("callAndWait() - probably timeout", e)
+            return null
         }
         return null
     }
