@@ -38,6 +38,7 @@ jar {
 repositories {
     mavenCentral()
     jcenter()
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
@@ -51,6 +52,8 @@ dependencies {
     compile 'org.telegram:telegrambots:3.3'                                         // telegram api
     compile group: 'it.sauronsoftware.cron4j', name: 'cron4j', version: '2.2.5'     // jvm cron
     compile 'com.google.guava:guava:23.1-jre'                                       // cache
+
+    compile "com.github.Ullink:simple-slack-api:1.2.0"
 
     compile 'com.neovisionaries:nv-websocket-client:2.3'
     compile 'com.google.code.gson:gson:2.8.0'

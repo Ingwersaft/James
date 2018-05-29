@@ -2,6 +2,7 @@ package com.mkring.james
 
 import com.mkring.james.chatbackend.*
 import com.mkring.james.chatbackend.rocketchat.RocketBackend
+import com.mkring.james.chatbackend.slack.SlackBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
@@ -88,6 +89,7 @@ class James(
                     rocketPassword = it.password
                 )
                 is Telegram -> TelegramBackend(it.token, it.username)
+                is Slack -> SlackBackend(it.botOauthToken)
             }
         }
     }
@@ -138,6 +140,10 @@ class James(
      */
     fun telegram(init: Telegram.() -> Unit) {
         chatConfigs += Telegram().also(init)
+    }
+
+    fun slack(init: Slack.() -> Unit) {
+        chatConfigs += Slack().also(init)
     }
 
     /**

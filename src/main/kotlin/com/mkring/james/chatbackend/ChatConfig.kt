@@ -19,3 +19,7 @@ class Telegram : ChatConfig() {
     lateinit var token: String
     lateinit var username: String
 }
+
+class Slack: ChatConfig(){
+    lateinit var botOauthToken: String
+}
