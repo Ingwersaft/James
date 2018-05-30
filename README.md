@@ -8,6 +8,7 @@ Currently supports Rocket.Chat and Telegram as targets.
 ## Features
  * Rocket.Chat via meteor websocket api
  * Telegram
+ * Slack using [Ullink/simple-slack-api](https://github.com/Ullink/simple-slack-api)
  * minimal DSL
  * conversation support
  * automatic mapping overview, mapped with `help`
