@@ -1,41 +1,47 @@
 package com.mkring.james.chatbackend.telegram
 
-import com.mkring.james.chatbackend.*
-import com.mkring.james.mapping.Ask
-import com.mkring.james.mapping.Mapping
-import com.mkring.james.mapping.MappingPattern
+import com.mkring.james.chatbackend.ChatBackend
+import com.mkring.james.chatbackend.IncomingPayload
+import com.mkring.james.fireAndForgetLoop
+import com.mkring.james.lg
+import kotlinx.coroutines.experimental.launch
+import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.TelegramBotsApi
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.generics.BotSession
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 
-
-class TelegramBackend(
-    override val abortKeywords: MutableList<String>,
-    override val jamesName: String
-) : ChatBackend {
-
+private val log = LoggerFactory.getLogger(TelegramBackend::class.java)
+class TelegramBackend(val botToken: String, val botUsername: String) : ChatBackend() {
     private lateinit var session: BotSession
 
-    override fun shutdown() {
-        session.stop()
+    override suspend fun start() {
+        log.info("start()")
+        session = TelegramBotsApi().registerBot(bot)
+        // handle outgoing
+        fireAndForgetLoop("TelegramBackend-outgoing-receiver") {
+            val (target, text, options) = fromJamesToBackendChannel.receive()
+            bot.execute(SendMessage(target, text).apply {
+                options["parse_mode"]?.let {
+                    lg("SendMessage parse mode: $it")
+                    setParseMode(it)
+                }
+            })
+        }
+        log.info("starting up done")
     }
 
-    private lateinit var token: String
-
-    private lateinit var username: String
-    val chatLogicMappings = mutableMapOf<String, Mapping.() -> Unit>()
-
-    val bot: TelegramLongPollingBot by lazy {
+    private val bot: TelegramLongPollingBot by lazy {
+        log.info("TelegramLongPollingBot starting up")
         ApiContextInitializer.init()
         object : TelegramLongPollingBot() {
-            override fun getBotToken(): String = token
-            override fun getBotUsername(): String = username
+            override fun getBotToken(): String = this@TelegramBackend.botToken
+            override fun getBotUsername(): String = this@TelegramBackend.botUsername
+            // handle incoming
             override fun onUpdateReceived(update: Update?) {
+                log.debug("onUpdateReceived: $update")
                 if (update == null) {
                     lg("update null")
                     return
@@ -44,7 +50,7 @@ class TelegramBackend(
                     lg("message null")
                     return
                 }
-                if (cleanText(update) == null) {
+                if (update.message.text == null) {
                     lg("text null")
                     return
                 }
@@ -60,63 +66,20 @@ class TelegramBackend(
                 val chatId = update.message.chatId.toString()
                 val text = cleanText(update)
 
-                // handle ask callbacks
-                if (callbackFutureHandled(text, chatId)) return
-
-                // launch first mapping
-                launchFirstMatchingMapping(
-                    text = text, uniqueChatTarget = chatId, username = update.message.from.userName,
-                    chat = this@TelegramBackend, chatLogicMappings = chatLogicMappings
-                )
-            }
-
-            private fun cleanText(update: Update): String {
-                val s = update.message.text
-                return if (s.contains("@")) {
-                    val splitted = s.split(Regex("@"))
-                    splitted.subList(0, splitted.size - 1).joinToString("@")
-                } else {
-                    s
+                launch {
+                    backendToJamesChannel.send(IncomingPayload(chatId, update.message.from.userName, text))
                 }
             }
         }
     }
 
-    override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
-
-    override fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit) {
-        lg("added mapping for '$matcher' with prefix '$prefix'")
-        chatLogicMappings[prefix + matcher.pattern] = mapping
+    private fun cleanText(update: Update): String {
+        val s = update.message.text
+        return if (s.contains("@")) {
+            val splitted = s.split(Regex("@"))
+            splitted.subList(0, splitted.size - 1).joinToString("@")
+        } else {
+            s
+        }
     }
-
-    override fun login(options: Map<String, String>) {
-        token = options.getValue("token")
-        username = options.getValue("username")
-        session = TelegramBotsApi().registerBot(bot)
-    }
-
-    override fun send(target: UniqueChatTarget, text: String, options: Map<String, String>) {
-        bot.execute(SendMessage(target, text).apply {
-            options["parse_mode"]?.let {
-                lg("SendMessage parse mode: $it")
-                setParseMode(it)
-            }
-        })
-    }
-
-    override fun ask(
-        timeout: Int,
-        timeunit: TimeUnit,
-        target: UniqueChatTarget,
-        text: String,
-        options: Map<String, String>
-    ): Ask<String> {
-        lg("ask: target=$target, text=$text")
-        val future = CompletableFuture<String>()
-        askResultMap[target] = future
-        send(target, text, options)
-        return Ask.of { future.get(timeout.toLong(), timeunit) }
-    }
-
 }
-

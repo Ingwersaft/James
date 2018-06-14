@@ -2,9 +2,13 @@ package com.mkring.james
 
 import com.mkring.james.chatbackend.*
 import com.mkring.james.chatbackend.rocketchat.RocketBackend
+import com.mkring.james.chatbackend.slack.SlackBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.launch
+import org.slf4j.LoggerFactory
 
 @DslMarker
 annotation class LimitClosureScope
@@ -14,87 +18,103 @@ annotation class LimitClosureScope
  */
 fun james(init: James.() -> Unit): James = James().also(init).autoStart()
 
+private val log = LoggerFactory.getLogger(James::class.java)
+
 @LimitClosureScope
 class James(
     var name: String? = null,
-    var autoStart: Boolean = true, val abortKeywords: MutableList<String> = mutableListOf()
+    var autoStart: Boolean = true,
+    val abortKeywords: MutableList<String> = mutableListOf()
 ) {
-    internal lateinit var chat: ChatBackend
-    internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
-    private var additionalChatOptions: Map<String, String> = emptyMap()
+    internal val chatBackends: MutableList<ChatBackend> = mutableListOf()
+    internal val chatConfigs: MutableList<ChatConfig> = mutableListOf()
 
-    internal lateinit var chatConfig: ChatConfig
+    internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
+
+    internal val actualChats: MutableList<Chat> = mutableListOf()
     fun autoStart() = if (autoStart) {
         start()
     } else {
         this
     }
 
-    fun start(): James {
+    /**
+     * check if james started
+     */
+    fun isStarted() = started
+
+    private var started: Boolean = false
+    fun start(): James = async(JamesPool) {
         lg("start()")
 
-        createChatBackend()
+        createChatBackends()
         val mappingprefix = when (name) {
             null -> ""
             else -> name + " "
         }
 
-        chat.abortKeywords.addAll(abortKeywords)
-
         lg("mapping prefix:$mappingprefix")
         val plainHelp = mappings.map { "$mappingprefix${it.key.pattern} - ${it.key.info}" }.joinToString("\n")
-
-        addHelpMapping(mappingprefix, plainHelp, "help")
-        if (chat is TelegramBackend) addHelpMapping(mappingprefix, plainHelp, "/help")
-
-        mappings.forEach { chat.addMapping(mappingprefix, it.key, it.value) }
-        chat.login(additionalChatOptions)
-
-        return this
-    }
-
-    private fun createChatBackend() {
-        val config = chatConfig
-        when (config) {
-            is RocketChat -> {
-                this.chat = RocketBackend(
-                    websocketTarget = config.websocketTarget,
-                    ignoreInvalidCa = config.ignoreInvalidCa,
-                    sslVerifyHostname = config.sslVerifyHostname,
-                    abortKeywords = mutableListOf(),
-                    jamesName = name ?: "",
-                    defaultAvatar = config.defaultAvatar
-                )
-                this.additionalChatOptions = mapOf("username" to config.username, "password" to config.password)
-            }
-            is Telegram -> {
-                this.chat = TelegramBackend(mutableListOf(), name ?: "")
-                this.additionalChatOptions = mapOf(
-                    "token" to config.token,
-                    "username" to config.username
-                )
+        val helpMapping = createHelpMapping(plainHelp, "help")
+        val helpMappingSlash = createHelpMapping(plainHelp, "/help")
+        mappings[MappingPattern(helpMapping.first, "nvmd")] = helpMapping.second
+        mappings[MappingPattern(helpMappingSlash.first, "nvmd")] = helpMappingSlash.second
+        log.info("going to startup ${chatBackends.size} chatBackends")
+        chatBackends.forEach {
+            actualChats += Chat(
+                mappingprefix = mappingprefix,
+                type = it::class.java.simpleName,
+                mappings = mappings.map { "$mappingprefix${it.key.pattern}" to it.value }.toMap(),
+                abortKeywords = abortKeywords, chatBackend = it
+            ).also {
+                launch {
+                    log.info("starting ${it.type}")
+                    it.start()
+                }
             }
         }
+        started = true
+        return@async this@James
+    }.awaitBlocking()
 
+    private fun createChatBackends() {
+        chatConfigs.map {
+            chatBackends += when (it) {
+                is RocketChat -> RocketBackend(
+                    websocketTarget = it.websocketTarget,
+                    sslVerifyHostname = it.sslVerifyHostname,
+                    ignoreInvalidCa = it.ignoreInvalidCa,
+                    defaultAvatar = it.defaultAvatar,
+                    rocketUsername = it.username,
+                    rocketPassword = it.password
+                )
+                is Telegram -> TelegramBackend(it.token, it.username)
+                is Slack -> SlackBackend(it.botOauthToken)
+            }
+        }
     }
 
-    private fun addHelpMapping(mappingprefix: String, plainHelp: String, helpCommand: String) {
-        chat.addMapping(mappingprefix, MappingPattern(helpCommand, "")) {
-            val lines = mutableListOf<String>()
-            lines += "${name ?: "James"} at yor service:"
-            lines += ""
-            if (abortKeywords.isNotEmpty()) {
-                lines += "abort interactions with: ${abortKeywords.joinToString(", ")}"
-            }
-            lines += "---"
-            lines += plainHelp
+    private fun createHelpMapping(
+        plainHelp: String,
+        helpCommand: String
+    ): Pair<String, Mapping.() -> Unit> {
+        val lines = mutableListOf<String>()
+        lines += "${name ?: "James"} at yor service:"
+        lines += ""
+        if (abortKeywords.isNotEmpty()) {
+            lines += "abort interactions with: ${abortKeywords.joinToString(", ")}"
+        }
+        lines += "---"
+        lines += plainHelp
+        val mappingBlock: Mapping.() -> Unit = {
             send(lines.joinToString("\n"))
         }
+        return Pair(helpCommand, mappingBlock)
     }
 
     fun stop() {
         lg("stop()")
-        chat.shutdown()
+        // TODO("support real stop")
     }
 
     /**
@@ -105,21 +125,25 @@ class James(
      */
     fun map(pattern: String, helptext: String, block: Mapping.() -> Unit) {
         lg("map() for pattern=$pattern helptext=$helptext")
-        mappings.put(MappingPattern(pattern, helptext), block)
+        mappings[MappingPattern(pattern, helptext)] = block
     }
 
     /**
      * create RochetChat config/chat
      */
     fun rocketchat(init: RocketChat.() -> Unit) {
-        chatConfig = RocketChat().also(init)
+        chatConfigs += RocketChat().also(init)
     }
 
     /**
      * create Telegram config/chat
      */
     fun telegram(init: Telegram.() -> Unit) {
-        chatConfig = Telegram().also(init)
+        chatConfigs += Telegram().also(init)
+    }
+
+    fun slack(init: Slack.() -> Unit) {
+        chatConfigs += Slack().also(init)
     }
 
     /**
@@ -129,6 +153,38 @@ class James(
     fun use(other: James) {
         other.mappings.forEach { p, block ->
             map(p.pattern, p.info, block)
+        }
+    }
+
+    /**
+     * If you need something other than the default backends, provide your own one
+     * !Important! You have to interact with both io-channels:
+     *
+     * [ChatBackend.backendToJamesChannel]: When your backend receives messages, you have to forward it
+     * to this channel. James will process them.
+     *
+     * [ChatBackend.fromJamesToBackendChannel]: You must! receive messaged on this channel. This is the channel
+     * for James to send something back to the backend caller. This is best handled in a backend thread or coroutine
+     */
+    fun addCustomChatBackend(custom: ChatBackend) {
+        chatBackends += custom
+    }
+
+    /**
+     * If you need to initiate a conversation you can use this method (if james started already)
+     *
+     * @param uniqueChatTarget target chat for which conversation shall be started
+     * @param mappingLogic your logic for this conversation
+     */
+    fun initiateConversation(uniqueChatTarget: UniqueChatTarget, mappingLogic: Mapping.() -> Unit) {
+        log.info("initiateConversation to $uniqueChatTarget")
+        if (started.not()) {
+            throw IllegalAccessError("james isn't started yet!")
+        }
+        actualChats.forEach {
+            Mapping("<initiateConversation>", uniqueChatTarget, null, "<initiateConversation>", it).apply {
+                mappingLogic()
+            }
         }
     }
 }

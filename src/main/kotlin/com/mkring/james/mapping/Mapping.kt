@@ -1,14 +1,33 @@
 package com.mkring.james.mapping
 
-import com.mkring.james.chatbackend.ChatBackend
+import com.mkring.james.Chat
+import com.mkring.james.JamesPool
+import com.mkring.james.awaitBlocking
+import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
-import org.slf4j.LoggerFactory
+import com.mkring.james.lg
+import kotlinx.coroutines.experimental.async
 import java.util.concurrent.TimeUnit
 
 data class MappingPattern(val pattern: String, val info: String)
 
-class Mapping(private val text: String, val senderId: UniqueChatTarget, val username: String?, private val chat: ChatBackend) {
-    val log = LoggerFactory.getLogger(javaClass)
+class Mapping(
+    private val commandText: String,
+    val uniqueChatTarget: UniqueChatTarget,
+    val username: String?,
+    private val mappingprefix: String,
+    private val parentChat: Chat
+) {
+    /**
+     * pattern will be present too, but not james name!
+     *
+     * james test arg1 arg2 -> [test,arg1,arg2]
+     * test arg1 arg2       -> [test,arg1,arg2]
+     */
+    val arguments by lazy {
+        lg("commandText=$commandText username=$username")
+        commandText.removePrefix(mappingprefix).trim().split(Regex("\\s+")).filterNot { it.isEmpty() }.toList()
+    }
 
     /**
      * default timeout when asking
@@ -23,32 +42,25 @@ class Mapping(private val text: String, val senderId: UniqueChatTarget, val user
     /**
      * If you ask with retries, this will be printed when the predicate is false
      */
-    val wrongAnswerText = "incompatible answer!"
+    var wrongAnswerText = "incompatible answer!"
 
     /**
      *  If you ask with retries, this will be printed when a timeout happens
      */
-    val timeoutText = "timeout!"
+    var timeoutText = "timeout!"
 
     /**
      * If you ask with retries and all failed, this will be printed
      */
-    val askWithRetryFailedText = "well, nevermind then"
-
-    /**
-     * prefix and pattern will be present too!
-     */
-    val arguments by lazy { text.split(Regex("\\s+")).filterNot { it.isEmpty() }.toList() }
+    var askWithRetryFailedText = "well, nevermind then"
 
     /**
      * Send some text to the chat counterpart
      */
     fun send(text: String, options: Map<String, String> = emptyMap()) {
-        if (text.isEmpty()) {
-            log.warn("trying to send empty text")
-            return
-        }
-        chat.send(senderId, text, options)
+        async(JamesPool) {
+            parentChat.send(OutgoingPayload(uniqueChatTarget, text, options))
+        }.awaitBlocking()
     }
 
     /**
@@ -56,7 +68,8 @@ class Mapping(private val text: String, val senderId: UniqueChatTarget, val user
      *  @param text the quesion to be asked
      *  @param options chat specific options -> see James README
      */
-    fun ask(text: String, options: Map<String, String> = emptyMap()): Ask<String> = chat.ask(askTimeout, timeUnit, senderId, text, options)
+    fun ask(text: String, options: Map<String, String> = emptyMap()): Ask<String> =
+        parentChat.ask(text, options, askTimeout, timeUnit, uniqueChatTarget)
 
     /**
      * Ask something and retry X times if timeout OR [predicate] false
@@ -65,28 +78,30 @@ class Mapping(private val text: String, val senderId: UniqueChatTarget, val user
      * @param text the question to be asked
      * @param options chat specific options -> see James README
      */
-    fun askWithRetry(retries: Int, text: String, options: Map<String, String> = emptyMap(),
-                     predicate: (String) -> Boolean): Ask<String> {
+    fun askWithRetry(
+        retries: Int, text: String, options: Map<String, String> = emptyMap(),
+        predicate: (String) -> Boolean
+    ): Ask<String> {
         //sequence is lazy eval!
         val firstOrNull = IntRange(0, retries).asSequence().map {
             ask(text, options)
         }.filter {
-            when (it) {
-                is Ask.Timeout -> {
-                    send(timeoutText)
-                    false
-                }
-                is Ask.Answer -> {
-                    when (predicate(it.value)) {
-                        true -> true
-                        else -> {
-                            send(wrongAnswerText)
-                            false
+                when (it) {
+                    is Ask.Timeout -> {
+                        send(timeoutText)
+                        false
+                    }
+                    is Ask.Answer -> {
+                        when (predicate(it.value)) {
+                            true -> true
+                            else -> {
+                                send(wrongAnswerText)
+                                false
+                            }
                         }
                     }
                 }
-            }
-        }.firstOrNull()
+            }.firstOrNull()
         return when (firstOrNull) {
             null -> {
                 send(askWithRetryFailedText)

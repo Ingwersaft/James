@@ -4,7 +4,7 @@ import com.mkring.james.chatbackend.RocketChat
 import com.mkring.james.james
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
-import junit.framework.Assert.assertEquals
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
 import org.junit.Test
 
@@ -25,7 +25,7 @@ class DslTest {
             map("/hallo", "some text", block)
             assertEquals(mappings[MappingPattern("/hallo", "some text")], block)
         }
-        assertEquals(RocketChat::class, created.chatConfig::class)
+        assertEquals(RocketChat::class, created.chatConfigs[0]::class)
 
 
         assertEquals(false, created.autoStart)

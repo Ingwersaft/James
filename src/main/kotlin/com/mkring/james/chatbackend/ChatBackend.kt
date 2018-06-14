@@ -1,71 +1,32 @@
 package com.mkring.james.chatbackend
 
-import com.mkring.james.RunningJobs
-import com.mkring.james.abortJob
-import com.mkring.james.mapping.Ask
-import com.mkring.james.mapping.Mapping
-import com.mkring.james.mapping.MappingPattern
-import kotlinx.coroutines.experimental.Job
-import kotlinx.coroutines.experimental.launch
-import org.slf4j.LoggerFactory
-import java.awt.SystemColor.text
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.experimental.channels.Channel
 
 typealias UniqueChatTarget = String
 
-interface ChatBackend {
-    fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit)
-    fun login(options: Map<String, String>)
-    fun send(target: UniqueChatTarget, text: String, options: Map<String, String> = emptyMap())
-    fun ask(timeout: Int, timeunit: TimeUnit, target: UniqueChatTarget, text: String, options: Map<String, String> = emptyMap()): Ask<String>
-    fun shutdown()
-    val abortKeywords: MutableList<String>
-    val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>>
-    val jamesName: String
-}
+/**
+ * TODO add info!
+ */
+data class IncomingPayload(
+    val target: UniqueChatTarget,
+    val username: String?,
+    val text: String
+)
 
-fun Any.lg(toBeLogged: Any) {
-    LoggerFactory.getLogger(this::class.java).apply {
-        this.info(toBeLogged.toString())
-    }
-}
+/**
+ * TODO add info!
+ */
+data class OutgoingPayload(
+    val target: UniqueChatTarget,
+    val text: String,
+    val options: Map<String, String> = emptyMap()
+)
 
-val log = LoggerFactory.getLogger(ChatBackend::class.java)
-fun launchFirstMatchingMapping(text: String, uniqueChatTarget: String, username: String?, chat: ChatBackend,
-                               chatLogicMappings: Map<String, Mapping.() -> Unit>): Job? {
-    val keyword = text.replace(chat.jamesName, "").trim().split(Regex("\\s+")).first()
-    chatLogicMappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
-    chatLogicMappings.filter { it.key.removePrefix(chat.jamesName).trim() == keyword }
-            .entries.first().let { entry ->
-        log.info("going to handle ${entry.key}")
-        val job = launch {
-            Mapping(text, uniqueChatTarget, username, chat).apply { entry.value.invoke(this) }
-        }
-        log.info("launch done")
-        RunningJobs.running.put(uniqueChatTarget, job)
-        return job
-    }
-}
-
-internal infix fun String.isIn(abortKeywords: List<String>): Boolean {
-    log.info("isIn(): $this $abortKeywords")
-    return abortKeywords.contains(this)
-}
-
-internal fun ChatBackend.callbackFutureHandled(text: String, target: UniqueChatTarget): Boolean {
-    askResultMap[target]?.let {
-        if (text isIn abortKeywords) {
-            log.info("target $target received abortKeyword: $text")
-            send(target, "aborted")
-            askResultMap[target]?.cancel(true)
-            askResultMap.remove(target)
-            abortJob(target)
-            return true
-        }
-        askResultMap[target]?.complete(text)
-        askResultMap.remove(target)
-        return true
-    }
-    return false
+/**
+ * TODO add info!
+ */
+abstract class ChatBackend {
+    val backendToJamesChannel: Channel<IncomingPayload> = Channel(10)
+    val fromJamesToBackendChannel: Channel<OutgoingPayload> = Channel(10)
+    abstract suspend fun start()
 }

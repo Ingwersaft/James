@@ -1,52 +1,45 @@
 package com.mkring.james.chatbackend.rocketchat
 
 import com.google.gson.Gson
+import com.mkring.james.JamesPool
 import com.mkring.james.chatbackend.ChatBackend
-import com.mkring.james.chatbackend.UniqueChatTarget
-import com.mkring.james.chatbackend.callbackFutureHandled
-import com.mkring.james.chatbackend.launchFirstMatchingMapping
-import com.mkring.james.mapping.Ask
-import com.mkring.james.mapping.Mapping
-import com.mkring.james.mapping.MappingPattern
+import com.mkring.james.chatbackend.IncomingPayload
+import com.mkring.james.fireAndForgetLoop
 import com.neovisionaries.ws.client.WebSocket
 import com.neovisionaries.ws.client.WebSocketAdapter
 import com.neovisionaries.ws.client.WebSocketFactory
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
+import com.neovisionaries.ws.client.WebSocketFrame
+import kotlinx.coroutines.experimental.*
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-/**
- * @param websocketTarget example: wss://rocketchat.lan/websocket
- */
-class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
-                    ignoreInvalidCa: Boolean = false,
-                    override val abortKeywords: MutableList<String>,
-                    override val jamesName: String, var defaultAvatar: String) : ChatBackend {
-    val log = LoggerFactory.getLogger(javaClass)
+class RocketBackend(
+    val websocketTarget: String,
+    val sslVerifyHostname: Boolean = true,
+    val ignoreInvalidCa: Boolean = false,
+    var defaultAvatar: String,
+    val rocketUsername: String,
+    val rocketPassword: String
+) : ChatBackend() {
     val gson = Gson()
     val NOID = -1 // if method doesn't support a unique id, use this
     val random = Random()
+    //
+    private var loginResultMap: MutableMap<Int, CompletableFuture<String>> = mutableMapOf()
 
-    val chatLogicMappings = mutableMapOf<String, Mapping.() -> Unit>()
+    lateinit var ws: WebSocket
+    lateinit var outgoingJob: Job
+    lateinit var subJob: Job
+    private val subbedRoomIds = mutableSetOf<String>() // subbed room id cache
 
-    override fun addMapping(prefix: String, matcher: MappingPattern, mapping: Mapping.() -> Unit) {
-        log.info("added mapping for '$matcher'")
-        chatLogicMappings.put(prefix + matcher.pattern, mapping)
+    override suspend fun start() {
+        log.info("start()")
+        ws = createWebsocket()
     }
 
-    override fun shutdown() {
-        ws.disconnect()
-    }
-
-    var selfUsername = "NOTSETYET"
-
-    override val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
-
-    var loginResultMap: MutableMap<Int, CompletableFuture<String>> = mutableMapOf()
-    val ws: WebSocket by lazy {
+    fun createWebsocket(): WebSocket = runBlocking {
         WebSocketFactory().also {
             if (ignoreInvalidCa) {
                 it.sslContext = NaiveSSLContext.getInstance("TLS")
@@ -74,7 +67,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
                     // handle toplevel future:
                     val referenceId: Int? = Regex(""""id"\n?:\n?"[0-9]+"""").find(message)?.groupValues?.map {
                         it.split(Regex(":"))[1].replace(Regex("\""), "")
-                                .replace(Regex("\n"), "").toInt()
+                            .replace(Regex("\n"), "").toInt()
                     }?.first()
                     referenceId?.let {
                         loginResultMap[it]?.complete(message)
@@ -88,7 +81,6 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
                         loginResultMap.remove(NOID)
                         return
                     }
-
 
                     // handle mappings
                     try {
@@ -104,7 +96,7 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
                             val text = it.fields?.args?.first()?.msg
 
                             // ignore messages by myself
-                            if (self == selfUsername) {
+                            if (self == rocketUsername) {
                                 log.info("ignore messages by myself")
                                 return
                             }
@@ -126,123 +118,169 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
                             log.info("'$text' from rid=$rid")
                             log.info("found Streamupdate : $it")
 
-                            // handle ask callbacks
-                            if (callbackFutureHandled(text, rid)) return
-
-                            // launch first found mapping
-                            launchFirstMatchingMapping(text = text, uniqueChatTarget = rid, username = username,
-                                    chat = this@RocketBackend, chatLogicMappings = chatLogicMappings)
+                            launch(JamesPool) {
+                                backendToJamesChannel.send(IncomingPayload(rid, username, text))
+                            }
                         }
                     } catch (e: Exception) {
                         log.error(e.message)
                     }
                 }
 
-
+                override fun onDisconnected(
+                    websocket: WebSocket?,
+                    serverCloseFrame: WebSocketFrame?,
+                    clientCloseFrame: WebSocketFrame?,
+                    closedByServer: Boolean
+                ) {
+                    log.info("onDisconnected (byserver=$closedByServer): $serverCloseFrame $clientCloseFrame")
+                    var successfullyReconnected = false
+                    while (successfullyReconnected.not()) {
+                        try {
+                            runBlocking {
+                                loginResultMap.clear()
+                                subbedRoomIds.clear()
+                                outgoingJob.cancelAndJoin()
+                                subJob.cancelAndJoin()
+                            }
+                            ws.clearListeners()
+                            ws.flush()
+                            ws = createWebsocket()
+                            successfullyReconnected = true
+                        } catch (e: Exception) {
+                            log.error("onDisconnected recreate connect error", e)
+                            Thread.sleep(5000)
+                        }
+                    }
+                    log.info("maybe reconnected successfully")
+                }
             })
+            if (it.doRocketchatAuth()) throw IllegalStateException("connect failed")
+
+            launchSubscriptionRoutine(it)
+
+            async {
+                outgoingJob = fireAndForgetLoop("ChatBackend-outgoing-receiver") {
+                    val (target, text, options) = fromJamesToBackendChannel.receive()
+                    it.sendToChat(
+                        target,
+                        random.nextInt(10000),
+                        text,
+                        options.getOrDefault("avatar", defaultAvatar)
+                    )
+                }
+            }
             it.isMissingCloseFrameAllowed = true
             it.pingInterval = 25 * 1000
         }
     }
 
-    override fun login(options: Map<String, String>) {
-        ws.apply {
-            connect()
-            CompletableFuture<String>().let {
-                loginResultMap.put(NOID, it)
-                sendJson(mapOf("msg" to "connect", "version" to "1", "support" to listOf("1")))
-                it.get().also { log.info("connect answer: $it") }
-            }
-
-            Thread.sleep(100L) // needed cause future with NOID
-
-            log.info("going to auth with plain user/pass:")
-            if (!loginMethod(options)) {
-                return
-            }
-
-            launchSubscriptionRoutine()
+    internal fun WebSocket.doRocketchatAuth(): Boolean {
+        connect()
+        CompletableFuture<String>().let {
+            loginResultMap[NOID] = it
+            sendJson(mapOf("msg" to "connect", "version" to "1", "support" to listOf("1")))
+            it.get().also { log.info("connect answer: $it") }
         }
+
+        Thread.sleep(100L) // needed cause future with NOID
+
+        log.info("going to auth with plain user/pass:")
+        if (!loginMethod(this)) {
+            return true
+        }
+        return false
     }
 
     /**
      * launches corouting which checks for all known subs of the botaccount in use and subscribes to all if not already
      * subscribed
      */
-    private fun launchSubscriptionRoutine() {
-        launch {
+    private fun launchSubscriptionRoutine(webSocket: WebSocket) {
+        subJob = launch(JamesPool) {
             while (true) {
-                log.info("checking for new subs")
+                log.trace("checking for new subs")
                 try {
-                    getBotSubscriptionsAndSubscribe()
+                    getBotSubscriptionsAndSubscribe(webSocket)
                 } catch (e: Exception) {
                     log.error("checking subs failed", e)
                 }
-                log.info("checking done")
+                log.trace("checking done")
                 delay(2, TimeUnit.SECONDS)
             }
         }
     }
 
-    private val subbedRoomIds = mutableSetOf<String>() // subbed room id cache
     /**
      * the actual subscribtion logic
      */
-    private fun getBotSubscriptionsAndSubscribe() {
-        var allAvailableStreams = gson.fromJson(callAndWait("subscriptions/get"), AvailableStreamsAnswer::class.java)
-                .also { log.info(it.toString()) }
+    internal fun getBotSubscriptionsAndSubscribe(webSocket: WebSocket) {
+        var allAvailableStreams =
+            gson.fromJson(callAndWait("subscriptions/get", webSocket = webSocket), AvailableStreamsAnswer::class.java)
+                .also { log.debug(it.toString()) }
 
-        log.info("allAvailableStreams: $allAvailableStreams")
+        log.trace("allAvailableStreams: $allAvailableStreams")
         allAvailableStreams?.let {
             it.result?.forEach { result ->
                 result.rid?.let {
                     if (subbedRoomIds.contains(it)) {
-                        log.debug("already subbed to rid $it")
+                        log.trace("already subbed to rid $it")
                         return@forEach
                     }
-                    ws.sendJson(mapOf("msg" to "sub", "name" to "stream-room-messages", "id" to random.nextInt(10000).toString(),
-                            "params" to arrayOf(it, false)))
+                    ws.sendJson(
+                        mapOf(
+                            "msg" to "sub", "name" to "stream-room-messages", "id" to random.nextInt(10000).toString(),
+                            "params" to arrayOf(it, false)
+                        )
+                    )
+                    log.info("subbedto new room: $it")
                     subbedRoomIds.add(it)
                 }
             }
         }
     }
 
-    private fun loginMethod(options: Map<String, String>): Boolean {
-        val username = options.getOrElse("username") { throw IllegalStateException("username not in option map") }
-        this.selfUsername = username
-        val password = options.getOrElse("password") { throw IllegalStateException("password not in option map") }
-        callAndWait(method = "login", objects = arrayOf(mapOf(
-                "user" to mapOf("username" to username),
-                "password" to password
-        ))).also {
+    internal fun loginMethod(webSocket: WebSocket): Boolean {
+        callAndWait(
+            webSocket = webSocket,
+            method = "login", objects = arrayOf(
+                mapOf(
+                    "user" to mapOf("username" to rocketUsername),
+                    "password" to rocketPassword
+                )
+            )
+        ).also {
             if (it == null) {
                 log.error("no response after login")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             }
             if (it.contains("User not found")) {
                 log.error("couldn't login, user not found - disconnected!")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             } else if (it.contains("Incorrect password")) {
                 log.error("couldn't login, incorrect password - disconnected!")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             } else if (it.contains("Meteor.Error")) {
                 log.error("meteor error, username password correct?")
-                ws.disconnect()
+                webSocket.disconnect()
                 return false
             }
         }
         return true
     }
 
-    private fun callAndWait(method: String, objects: Array<Any> = emptyArray()): String? {
+    internal fun callAndWait(
+        method: String,
+        objects: Array<Any> = emptyArray(),
+        webSocket: WebSocket
+    ): String? {
         CompletableFuture<String>().let {
             val uuid = random.nextInt(10000)
             loginResultMap.put(uuid, it)
-            ws.call(method, uuid, objects)
+            webSocket.call(method, uuid, objects)
             it.get().also {
                 log.info("got $method answer: $it")
                 return it
@@ -251,26 +289,12 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
         return null
     }
 
-    override fun send(target: UniqueChatTarget, text: String, options: Map<String, String>) {
-        log.info("send: target=$target, text=$text")
-        ws.sendToChat(target, random.nextInt(10000), text, options.getOrDefault("avatar", defaultAvatar))
-    }
-
-    override fun ask(timeout: Int, timeunit: TimeUnit, target: UniqueChatTarget, text: String, options: Map<String, String>): Ask<String> {
-        log.info("ask: target=$target, text=$text")
-        val uuid = random.nextInt(10000)
-        val future = CompletableFuture<String>()
-        askResultMap.put(target, future)
-        ws.sendToChat(target, uuid, text, options.getOrDefault("avatar", defaultAvatar))
-        return Ask.of { future.get(timeout.toLong(), timeunit) }
-    }
-
     fun WebSocket.call(method: String, uuid: Int, objects: Array<Any> = emptyArray()) {
         log.info("call: method=$method objects=$objects")
         val payload = mutableMapOf<String, Any>(
-                "msg" to "method",
-                "method" to method,
-                "id" to uuid.toString()
+            "msg" to "method",
+            "method" to method,
+            "id" to uuid.toString()
         )
         if (objects.isNotEmpty()) {
             payload.put("params", objects)
@@ -279,15 +303,20 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
     }
 
     fun WebSocket.sendToChat(rid: String, uuid: Int, text: String, avatarEmoji: String) {
-        sendJson(mapOf("msg" to "method",
+        sendJson(
+            mapOf(
+                "msg" to "method",
                 "method" to "sendMessage",
                 "id" to "$uuid",
                 "params" to arrayOf(
-                        mapOf("rid" to rid,
-                                "msg" to text,
-                                "emoji" to avatarEmoji
-                        )
-                )))
+                    mapOf(
+                        "rid" to rid,
+                        "msg" to text,
+                        "emoji" to avatarEmoji
+                    )
+                )
+            )
+        )
     }
 
     fun WebSocket.send(text: String) {
@@ -298,5 +327,9 @@ class RocketBackend(websocketTarget: String, sslVerifyHostname: Boolean = true,
     fun WebSocket.sendJson(obj: Any) {
         log.info("sendJson: obj=$obj")
         Gson().toJson(obj).let { this.send(it) }
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(RocketBackend::class.java)
     }
 }

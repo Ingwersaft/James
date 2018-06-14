@@ -1,7 +1,7 @@
 group = 'com.github.Ingwersaft'
 
 buildscript {
-    ext.kotlin_version = '1.2.0'
+    ext.kotlin_version = '1.2.31'
     ext.dokka_version = '0.9.15'
 
     repositories {
@@ -38,23 +38,32 @@ jar {
 repositories {
     mavenCentral()
     jcenter()
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.20'
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.20'
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.22.5'
+
+    compile 'org.slf4j:slf4j-api:1.7.25'
 
     compile 'me.sargunvohra.lib:pokekotlin:2.3.0'                                   // poke api
     compile 'org.telegram:telegrambots:3.3'                                         // telegram api
     compile group: 'it.sauronsoftware.cron4j', name: 'cron4j', version: '2.2.5'     // jvm cron
-    compile "org.slf4j:slf4j-simple:1.7.25"                                         // logging
     compile 'com.google.guava:guava:23.1-jre'                                       // cache
+
+    compile "com.github.Ullink:simple-slack-api:1.2.0"
 
     compile 'com.neovisionaries:nv-websocket-client:2.3'
     compile 'com.google.code.gson:gson:2.8.0'
 
+    testCompile "org.slf4j:slf4j-simple:1.7.25"                                         // logging
     testCompile 'junit:junit:4.12'
+
+    testCompile "io.mockk:mockk:1.7.8"
+    testCompile "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5"
+
 }
 
 compileKotlin {
