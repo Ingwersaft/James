@@ -146,9 +146,10 @@ bintray {
     key = System.getenv('BINTRAY_KEY')
     publications = ['mavenCustom']
     publish = true
+    dryRun = false
     pkg {
         repo = 'JamesBot'
-        name = project.group
+        name = 'JamesBot'
         userOrg = user
         websiteUrl = 'https://github.com/Ingwersaft/James'
         issueTrackerUrl = 'https://github.com/Ingwersaft/James/issues'
