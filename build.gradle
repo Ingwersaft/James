@@ -21,7 +21,6 @@ buildscript {
 apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: "net.researchgate.release"
-apply plugin: "net.researchgate.release"
 
 apply plugin: 'application'
 ext.main = 'com.mkring.james.JamesRuntimeKt'
