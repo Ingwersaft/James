@@ -44,5 +44,13 @@ jobs:
                     gradle bintrayUpload bintrayPublish
             fi
 
+workflows:
+  version: 2
+  all:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /[0-9]+\.[0-9]+\.[0-9]+/
 
 
