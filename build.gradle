@@ -118,6 +118,10 @@ publishing {
                     }
                 }
             }
+
+            version = project.version
+            group = project.group
+            artifact = project.name
         }
     }
 }
@@ -147,6 +151,7 @@ bintray {
     publications = ['mavenCustom']
     publish = true
     dryRun = false
+
     pkg {
         repo = 'JamesBot'
         name = 'JamesBot'
