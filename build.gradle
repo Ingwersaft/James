@@ -147,8 +147,8 @@ bintray {
     publications = ['mavenCustom']
     publish = true
     pkg {
-        repo = 'maven'
-        name = 'JamesBot'
+        repo = 'JamesBot'
+        //name = 'JamesBot'
         userOrg = user
         websiteUrl = 'https://github.com/Ingwersaft/James'
         issueTrackerUrl = 'https://github.com/Ingwersaft/James/issues'
