@@ -144,12 +144,12 @@ kotlin {
 bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
-    publications = ['mavenJava']
+    publications = ['mavenCustom']
     publish = true
     pkg {
         repo = 'JamesBot'
         name = 'JamesBot'
-        userOrg = 'ingwersaft'
+        userOrg = project.group
         websiteUrl = 'https://github.com/Ingwersaft/James'
         issueTrackerUrl = 'https://github.com/Ingwersaft/James/issues'
         vcsUrl = 'https://github.com/Ingwersaft/James.git'
