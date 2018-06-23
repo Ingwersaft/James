@@ -15,12 +15,14 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
         classpath "net.researchgate:gradle-release:2.6.0"
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:1.8.2"
     }
 }
 
 apply plugin: 'kotlin'
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: "net.researchgate.release"
+apply plugin: "com.jfrog.bintray"
 
 apply plugin: 'application'
 ext.main = 'com.mkring.james.JamesRuntimeKt'
@@ -136,5 +138,26 @@ release {
 kotlin {
     experimental {
         coroutines "enable"
+    }
+}
+
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['mavenJava']
+    publish = true
+    pkg {
+        repo = 'JamesBot'
+        name = 'JamesBot'
+        userOrg = 'ingwersaft'
+        websiteUrl = 'https://github.com/Ingwersaft/James'
+        issueTrackerUrl = 'https://github.com/Ingwersaft/James/issues'
+        vcsUrl = 'https://github.com/Ingwersaft/James.git'
+
+        labels = ['Chat', 'Chatbot', 'Kotlin', 'Slack', 'Telegram', 'Bot', 'RocketChat']
+
+        version {
+            name = project.version
+        }
     }
 }

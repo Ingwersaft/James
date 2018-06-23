@@ -37,3 +37,7 @@ jobs:
       # run tests!
       - run: gradle test
 
+      - deploy: gradle bintrayPublish
+
+
+
