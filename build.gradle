@@ -149,7 +149,7 @@ bintray {
     pkg {
         repo = 'maven'
         name = 'JamesBot'
-        userOrg = project.group
+        userOrg = user
         websiteUrl = 'https://github.com/Ingwersaft/James'
         issueTrackerUrl = 'https://github.com/Ingwersaft/James/issues'
         vcsUrl = 'https://github.com/Ingwersaft/James.git'
