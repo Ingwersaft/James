@@ -158,7 +158,7 @@ bintray {
         labels = ['Chat', 'Chatbot', 'Kotlin', 'Slack', 'Telegram', 'Bot', 'RocketChat']
 
         version {
-            name = project.version
+
         }
     }
 }
