@@ -148,7 +148,7 @@ bintray {
     publish = true
     pkg {
         repo = 'JamesBot'
-        //name = 'JamesBot'
+        name = project.group
         userOrg = user
         websiteUrl = 'https://github.com/Ingwersaft/James'
         issueTrackerUrl = 'https://github.com/Ingwersaft/James/issues'
