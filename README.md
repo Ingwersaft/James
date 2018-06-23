@@ -1,4 +1,6 @@
 [![Release](https://jitpack.io/v/Ingwersaft/James.svg?style=flat-square)](https://jitpack.io/#Ingwersaft/James)
+[ ![Download](https://api.bintray.com/packages/ingwersaft/JamesBot/JamesBot/images/download.svg) ](https://bintray.com/ingwersaft/JamesBot/JamesBot/_latestVersion)
+[![CircleCI](https://circleci.com/gh/Ingwersaft/James.svg?style=svg)](https://circleci.com/gh/Ingwersaft/James)
 
 # James
 Micro chat framework for Kotlin.
