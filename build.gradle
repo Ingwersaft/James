@@ -121,7 +121,6 @@ publishing {
 
             version = project.version
             group = project.group
-            artifact = project.name
         }
     }
 }
