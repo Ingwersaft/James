@@ -5,16 +5,16 @@
 # James
 Micro chat framework for Kotlin.
 
-Currently supports Rocket.Chat and Telegram as targets.
+Currently supports Rocket.Chat, Telegram and Slack as targets.
 
 ## Features
- * Rocket.Chat via meteor websocket api
+ * Rocket.Chat via Websocket api
  * Telegram
  * Slack using [Ullink/simple-slack-api](https://github.com/Ullink/simple-slack-api)
  * minimal DSL
  * conversation support
- * automatic mapping overview, mapped with `help`
- * mapping prefix, so you bot has a name
+ * automatic mapping overview aka `help`
+ * Name your bot
  * conversation support with retries
  
 ## Usage
@@ -48,7 +48,7 @@ fun main(args: Array<String>) {
 
 ![example](readmefiles/rocketchatexample.png)
 
-**Take a look at the Mapping.kt source for all possibilities**
+**Take a look at the wiki or the Mapping.kt source for all possibilities**
 
 ## Target chat specifics
 the `send` and `ask` methods support optional options:
@@ -69,22 +69,18 @@ Parsemode (`HTML` or `Markdown` supported)
 ```kotlin
 options["parse_mode"] == "Markdown"
 ```
-
-general stuff:
- * [How to get a telegram bot](http://not.found.org) 
- * [What can my bot see, what not](http://not.found.org)
- 
 Commands:
 Every String with a leading `/` is clickable inside telegram. This can be used in your mapping string, but also if you ask
 a user some question, you can provide possible, clickable, values.
  
 ## How to get James
-James is published at [JitPack](https://jitpack.io/#Ingwersaft/James).
+James is published at [jcenter](https://bintray.com/ingwersaft/JamesBot/JamesBot) and [JitPack](https://jitpack.io/#Ingwersaft/James).
 ### Gradle
 ```groovy
 allprojects {
     repositories {
-        ...
+        jcenter()
+        ...or...
         maven { url 'https://jitpack.io' }
     }
 }
@@ -100,12 +96,18 @@ dependencies {
         <id>jitpack.io</id>
         <url>https://jitpack.io</url>
     </repository>
+    ...or...
+    <repository>
+        <id>central</id>
+        <name>bintray</name>
+        <url>https://jcenter.bintray.com</url>
+    </repository>
 </repositories>
 ...
 <dependency>
     <groupId>com.github.Ingwersaft</groupId>
     <artifactId>James</artifactId>
-    <version>#TAG#</version>
+    <version>#VERSION#</version>
 </dependency>
 ```
 
@@ -115,5 +117,5 @@ Jitpack also provides javadoc web publishing. Use the URL
 (e.g.: [master-SNAPSHOT](https://jitpack.io/com/github/Ingwersaft/James/master-SNAPSHOT/javadoc/))
 to access the javadoc for the given version.
 
-## Known Problems
- * chat interaction without retries in case of errors
+## Known caveats
+ * James doesn't execute retries in case of backend connection problems
