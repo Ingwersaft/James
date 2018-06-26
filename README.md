@@ -48,7 +48,7 @@ fun main(args: Array<String>) {
 
 ![example](readmefiles/rocketchatexample.png)
 
-**Take a look at the [wiki](https://github.com/Ingwersaft/James/wiki) or the Mapping.kt source for all possibilities**
+**Take a look at the [wiki](https://github.com/Ingwersaft/James/wiki) or the [Mapping.kt](https://github.com/Ingwersaft/James/blob/master/src/main/kotlin/com/mkring/james/mapping/Mapping.kt) source for all possibilities**
 
 ## Target chat specifics
 the `send` and `ask` methods support optional options:
