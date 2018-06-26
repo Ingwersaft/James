@@ -117,5 +117,11 @@ Jitpack also provides javadoc web publishing. Use the URL
 (e.g.: [master-SNAPSHOT](https://jitpack.io/com/github/Ingwersaft/James/master-SNAPSHOT/javadoc/))
 to access the javadoc for the given version.
 
+## Build
+```
+$ git clone https://github.com/Ingwersaft/James.git && cd James
+$ ./gradlew build
+```
+
 ## Known caveats
  * James doesn't execute retries in case of backend connection problems
