@@ -44,6 +44,8 @@ jobs:
                     gradle bintrayUpload bintrayPublish
             fi
 
+      - run: bash <(curl -s https://codecov.io/bash)
+
 workflows:
   version: 2
   all:
