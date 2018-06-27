@@ -36,7 +36,12 @@ jar {
         attributes 'Main-Class': main
     }
 }
-
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        xml.destination file("${buildDir}/reports/jacoco/report.xml")
+    }
+}
 repositories {
     mavenCentral()
     jcenter()
