@@ -15,7 +15,7 @@ class StreamMessageUpdate {
     var id: String? = null
     @SerializedName("fields")
     @Expose
-    var fields: Fields? = null
+    var fields: FieldsGson? = null
 
     override fun toString(): String {
         return "StreamMessageUpdate(msg=$msg, collection=$collection, id=$id, fields=$fields)"
@@ -50,7 +50,7 @@ class Arg {
 
 }
 
-class Fields {
+class FieldsGson {
     @SerializedName("eventName")
     @Expose
     var eventName: String? = null
@@ -59,7 +59,7 @@ class Fields {
     var args: List<Arg>? = null
 
     override fun toString(): String {
-        return "Fields(eventName=$eventName, args=$args)"
+        return "FieldsGson(eventName=$eventName, args=$args)"
     }
 
 
