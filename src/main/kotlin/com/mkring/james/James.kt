@@ -32,7 +32,7 @@ class James(
     internal val mappings: MutableMap<MappingPattern, Mapping.() -> Unit> = mutableMapOf()
 
     internal val actualChats: MutableList<Chat> = mutableListOf()
-    fun autoStart() = if (autoStart) {
+    internal fun autoStart() = if (autoStart) {
         start()
     } else {
         this
