@@ -24,7 +24,7 @@ class StreamMessageUpdate {
 }
 
 
-class Arg {
+class Argold {
     @SerializedName("_id")
     @Expose
     var id: String? = null
@@ -56,7 +56,7 @@ class FieldsGson {
     var eventName: String? = null
     @SerializedName("args")
     @Expose
-    var args: List<Arg>? = null
+    var args: List<Argold>? = null
 
     override fun toString(): String {
         return "FieldsGson(eventName=$eventName, args=$args)"

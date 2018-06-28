@@ -7,6 +7,7 @@ import com.google.gson.annotations.Expose
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
 import com.mkring.james.chatbackend.ChatBackend
+import com.mkring.james.chatbackend.IncomingPayload
 import com.tinder.scarlet.Lifecycle
 import com.tinder.scarlet.Scarlet
 import com.tinder.scarlet.Stream
@@ -21,14 +22,9 @@ import kotlinx.coroutines.experimental.channels.ReceiveChannel
 import kotlinx.coroutines.experimental.channels.consumeEach
 import kotlinx.coroutines.experimental.launch
 import kotlinx.coroutines.experimental.reactive.consumeEach
-import kotlinx.coroutines.experimental.runBlocking
 import okhttp3.OkHttpClient
 import java.util.*
 
-fun main(args: Array<String>) = runBlocking {
-    RocketChatBackendV3("<>", "<>", "<>").start()
-    Thread.sleep(2000000)
-}
 
 class RocketChatBackendV3(
     private val webSocketTargetUrl: String,
@@ -51,6 +47,16 @@ class RocketChatBackendV3(
         var subbedRooms = mutableListOf<String>()
         var connected = false
         launch {
+            fromJamesToBackendChannel.consumeEach {
+                if (connected) {
+                    // add emoji support!
+                    client.sendMessage(SendMessageRequest(rid = it.target, messageText = it.text))
+                } else {
+                    println("warn: not connected!")
+                }
+            }
+        }
+        launch {
             client.observeEvents().consumeEach {
                 when (it) {
                     is WebSocket.Event.OnMessageReceived -> Unit //debug log
@@ -60,14 +66,17 @@ class RocketChatBackendV3(
                     }
                     is WebSocket.Event.OnConnectionClosing -> {
                         subbedRooms.clear()
+                        connected = false
                         println("closing?!")
                     }
                     is WebSocket.Event.OnConnectionClosed -> {
                         subbedRooms.clear()
+                        connected = false
                         println("closed!")
                     }
                     is WebSocket.Event.OnConnectionFailed -> {
                         subbedRooms.clear()
+                        connected = false
                         println("failed!")
                     }
                 }
@@ -98,19 +107,29 @@ class RocketChatBackendV3(
                     it.msg == "result" && it.resultArray() != null -> {
                         val subs = it.resultArray()
                         println("subResponse: $subs")
-                        subs?.forEach {
+                        subs?.filter { subbedRooms.contains(it.rid).not() }?.forEach {
                             client.sendSubscribeToRoom(SubscribeRequest(roomId = it.rid))
                             subbedRooms.add(it.rid)
                             println("subbed to room ${it.rid}")
                         }
                     }
+                    it.msg == "changed" && it.collection == "stream-room-messages" -> {
+                        println("received message: ${it.fields}")
+                        println("args: ${it.fields?.args}")
+                        it.fields?.args?.forEach {
+                            println("arg: $it")
+                            if (it.u.username != username) {
+                                backendToJamesChannel.send(IncomingPayload(it.rid, it.u.username, it.msg))
+                            } else {
+                                println("ignoring msg from myself")
+                            }
+                        }
+                    }
+                    it.msg == "changed" -> {
+                        println("changed: $it")
+                    }
                     else -> println("unhandled!: $it")
                 }
-            }
-        }
-        launch {
-            fromJamesToBackendChannel.consumeEach {
-                println("looks like i should send something: $it")
             }
         }
         clientLifecycleRegistry.onNext(Lifecycle.State.Started)
@@ -138,6 +157,9 @@ interface RocketChat {
 
     @Send
     fun sendSubscribeToRoom(request: SubscribeRequest)
+
+    @Send
+    fun sendMessage(request: SendMessageRequest)
 }
 
 private val gson = Gson()
@@ -156,6 +178,7 @@ data class RocketResponse(
 
     val methods: List<String>? = null,
     val subs: List<String>? = null
+
 ) {
     fun resultElement(): TokenResult? {
         return if (resultObject?.isJsonObject == true) {
@@ -183,8 +206,23 @@ data class RocketResponse(
 }
 
 data class Fields(
-    val emails: List<Email>,
-    val username: String
+    val emails: List<Email>? = null,
+    val username: String? = null,
+    val eventName: String? = null,
+    val args: List<Arg>? = null
+)
+
+data class Arg(
+    val _id: String,
+
+    val rid: String,
+    val msg: String,
+    val ts: TokenExpires,
+    val u: U,
+    val mentions: List<Any?>,
+    val channels: List<Any?>,
+
+    val _updatedAt: TokenExpires
 )
 
 data class Email(
@@ -274,6 +312,23 @@ data class SubscribeRequest(
     private val name: String = "stream-room-messages",
     private val id: String = rand.nextInt(10_000).toString(),
     @Expose(serialize = false)
-    private val roomId: String,
+    val roomId: String,
     private val params: List<Any> = listOf(roomId, false)
 )
+
+// {"msg":"method","method":"sendMessage","id":"5495","params":[{"rid":"vPnG2XhMuiTgy5yX2","msg":"world","emoji":":tophat:"}]}
+data class SendMessageRequest(
+    @Expose(serialize = false)
+    private val rid: String,
+    @Expose(serialize = false)
+    private val emoji: String = ":tophat:",
+    @Expose(serialize = false)
+    private val messageText: String,
+    private val params: List<Map<String, String>> = listOf(
+        mapOf(
+            "rid" to rid,
+            "msg" to messageText,
+            "emoji" to emoji
+        )
+    )
+) : GenericRequest("method", "sendMessage")
