@@ -37,15 +37,15 @@ class Arg {
     @SerializedName("ts")
     @Expose
     var ts: Ts? = null
-    @SerializedName("u")
+    @SerializedName("unew")
     @Expose
-    var u: U? = null
+    var u: Uold? = null
     @SerializedName("_updatedAt")
     @Expose
     var updatedAt: UpdatedAt? = null
 
     override fun toString(): String {
-        return "Arg(id=$id, rid=$rid, msg=$msg, ts=$ts, u=$u, updatedAt=$updatedAt)"
+        return "Arg(id=$id, rid=$rid, msg=$msg, ts=$ts, unew=$u, updatedAt=$updatedAt)"
     }
 
 }

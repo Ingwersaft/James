@@ -37,7 +37,7 @@ class Result {
     @SerializedName("_id")
     @Expose
     var id: String? = null
-    @SerializedName("u")
+    @SerializedName("unew")
     @Expose
     var u: U? = null
     @SerializedName("rid")
@@ -54,7 +54,7 @@ class Result {
     var alert: Boolean? = null
 
     override fun toString(): String {
-        return "Result(t=$t, unread=$unread, open=$open, name=$name, id=$id, u=$u, rid=$rid, updatedAt=$updatedAt, ts=$ts, alert=$alert)"
+        return "Result(t=$t, unread=$unread, open=$open, name=$name, id=$id, unew=$u, rid=$rid, updatedAt=$updatedAt, ts=$ts, alert=$alert)"
     }
 
 }
@@ -70,7 +70,7 @@ class Ts {
 
 }
 
-class U {
+class Uold {
     @SerializedName("username")
     @Expose
     var username: String? = null
@@ -79,7 +79,7 @@ class U {
     var id: String? = null
 
     override fun toString(): String {
-        return "U(username=$username, id=$id)"
+        return "Unew(username=$username, id=$id)"
     }
 
 }
