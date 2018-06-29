@@ -1,7 +1,7 @@
 package com.mkring.james
 
 import com.mkring.james.chatbackend.*
-import com.mkring.james.chatbackend.rocketchat.RocketBackend
+import com.mkring.james.chatbackend.rocketchat.RocketChatBackend
 import com.mkring.james.chatbackend.slack.SlackBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
@@ -80,13 +80,13 @@ class James(
     private fun createChatBackends() {
         chatConfigs.map {
             chatBackends += when (it) {
-                is RocketChat -> RocketBackend(
-                    websocketTarget = it.websocketTarget,
+                is RocketChat -> RocketChatBackend(
+                    webSocketTargetUrl = it.websocketTarget,
                     sslVerifyHostname = it.sslVerifyHostname,
                     ignoreInvalidCa = it.ignoreInvalidCa,
                     defaultAvatar = it.defaultAvatar,
-                    rocketUsername = it.username,
-                    rocketPassword = it.password
+                    username = it.username,
+                    password = it.password
                 )
                 is Telegram -> TelegramBackend(it.token, it.username)
                 is Slack -> SlackBackend(it.botOauthToken)

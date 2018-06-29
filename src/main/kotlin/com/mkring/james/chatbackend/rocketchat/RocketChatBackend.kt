@@ -22,34 +22,32 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 
-class RocketChatBackendV3(
+class RocketChatBackend(
     private val webSocketTargetUrl: String,
     private val username: String,
     private val password: String,
+    private val sslVerifyHostname: Boolean = true,
+    private val ignoreInvalidCa: Boolean = false,
     private val defaultAvatar: String
-) : ChatBackend(), Logger by LoggerFactory.getLogger(RocketChatBackendV3::class.java) {
+) : ChatBackend(), Logger by LoggerFactory.getLogger(RocketChatBackend::class.java) {
     private val clientLifecycleRegistry = LifecycleRegistry()
 
     private val client: RocketChat by lazy {
-        val scarlet = Scarlet.Builder()
-            .webSocketFactory(OkHttpClient().newWebSocketFactory(webSocketTargetUrl))
-            .lifecycle(clientLifecycleRegistry)
-            .addMessageAdapterFactory(GsonMessageAdapter.Factory())
-            .addStreamAdapterFactory(CoroutinesStreamAdapterFactory())
-            .build()
+        val scarlet = buildScarlet()
         scarlet.create<RocketChat>()
     }
-    private val subbedRooms = mutableListOf<String>()
-    private var connected = false
 
+    private val subbedRooms = mutableListOf<String>()
+
+    private var connected = false
     override suspend fun start() {
-        launch {
-            info("launching `handleOutgoingMessages` coroutine")
-            handleOutgoingMessages()
-        }
         launch {
             info("launching `handleWebsocketClientEvents` coroutine")
             handleWebsocketClientEvents()
+        }
+        launch {
+            info("launching `handleOutgoingMessages` coroutine")
+            handleOutgoingMessages()
         }
         launch {
             info("launching `handleRocketchatApiEvents` coroutine")
@@ -147,6 +145,7 @@ class RocketChatBackendV3(
                     subbedRooms.clear()
                     connected = false
                     error("connection to `${webSocketTargetUrl}` failed!")
+                    error(it)
                 }
             }
         }
@@ -165,6 +164,33 @@ class RocketChatBackendV3(
             } else {
                 error("not connected so won't send $it!")
             }
+        }
+    }
+
+    private fun buildScarlet(): Scarlet {
+        return Scarlet.Builder().apply {
+            webSocketFactory(
+                OkHttpClient.Builder().apply {
+                    if (ignoreInvalidCa) {
+                        sslSocketFactory(
+                            NaiveSSLContext.getInstance("TLS").socketFactory,
+                            NaiveSSLContext.NaiveTrustManager
+                        )
+                    }
+                    if (sslVerifyHostname.not()) {
+                        hostnameVerifier { _, _ -> true }
+                    }
+                }.build().newWebSocketFactory(webSocketTargetUrl)
+
+            )
+            lifecycle(clientLifecycleRegistry)
+            addMessageAdapterFactory(GsonMessageAdapter.Factory())
+            addStreamAdapterFactory(CoroutinesStreamAdapterFactory())
+            if (ignoreInvalidCa) {
+
+            }
+        }.let {
+            it.build()
         }
     }
 }

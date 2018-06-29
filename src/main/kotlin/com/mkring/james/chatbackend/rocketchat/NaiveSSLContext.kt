@@ -50,7 +50,7 @@ object NaiveSSLContext {
     private fun init(context: SSLContext): SSLContext {
         try {
             // Set NaiveTrustManager.
-            context.init(null, arrayOf<TrustManager>(NaiveTrustManager()), null)
+            context.init(null, arrayOf<TrustManager>(NaiveTrustManager), null)
         } catch (e: KeyManagementException) {
             throw RuntimeException("Failed to initialize an SSLContext.", e)
         }
@@ -58,7 +58,7 @@ object NaiveSSLContext {
         return context
     }
 
-    class NaiveTrustManager : X509TrustManager {
+    object NaiveTrustManager : X509TrustManager {
         override fun checkClientTrusted(p0: Array<out X509Certificate>?, p1: String?) {
         }
 
