@@ -15,7 +15,7 @@ class SlackBackend(val botOauthToken: String) : ChatBackend(),
         info("staring slack session")
         val session = SlackSessionFactory.createWebSocketSlackSession(botOauthToken)
         session.connect()
-        session.addMessagePostedListener { event, session ->
+        session.addMessagePostedListener { event, _ ->
             info("received message: $event")
             val payload = IncomingPayload(event.channel.id, event.user.realName, event.messageContent)
             launch {

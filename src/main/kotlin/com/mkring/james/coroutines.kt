@@ -23,7 +23,7 @@ suspend fun fireAndForgetLoop(name: String, block: suspend CoroutineScope.() -> 
             block()
         } catch (e: JobCancellationException) {
             fireAndForgetLoopLog.warn("$name: received JobCancellationException, will cancel myself")
-            coroutineContext.cancel(e)
+            kotlin.coroutines.experimental.coroutineContext.cancel(e)
         } catch (e: Exception) {
             fireAndForgetLoopLog.error("catched exception in $name routing: ${e::class.java.simpleName}:${e.message}")
         }

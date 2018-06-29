@@ -1,6 +1,5 @@
 package com.mkring.james.chatbackend.rocketchat
 
-import com.beust.klaxon.Json
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.annotations.Expose
@@ -93,21 +92,17 @@ data class ResultElement(
     val userMentions: Long,
     val groupMentions: Long,
 
-    @Json(name = "_updatedAt")
-    val updatedAt: TokenExpires,
+    val _updatedAt: TokenExpires,
 
-    @Json(name = "_id")
-    val id: String
+    val _id: String
 )
 
 data class TokenExpires(
-    @Json(name = "\$date")
-    val date: Long
+    val `$date`: Long
 )
 
 data class U(
-    @Json(name = "_id")
-    val id: String,
+    val _id: String,
 
     val username: String,
     val name: Any? = null
