@@ -63,62 +63,70 @@ class RocketChatBackend(
     private suspend fun refreshSubscriptions() {
         while (true) {
             delay(2000)
-            if (connected) {
-                client.sendGetSubscriptionRequest(GetSubscriptionRequest())
-                debug("sendGetSubscriptionRequest executed")
+            try {
+                if (connected) {
+                    client.sendGetSubscriptionRequest(GetSubscriptionRequest())
+                    debug("sendGetSubscriptionRequest executed")
+                }
+            } catch (e: Exception) {
+                warn("refreshSubscriptions routine threw exception: ${e.singleLineLog()}")
             }
         }
     }
 
     private suspend fun handleRocketchatApiEvents() {
         client.onMessage().consumeEach {
-            when {
-                it.msg == "ping" -> client.sendPong(Pong())
-                it.server_id == "0" -> client.sendConnect(Connect())
-                it.msg == "connected" -> {
-                    info("connected: $it")
-                    client.sendLogin(LoginRequest(params = listOf(Param(User(username), password))))
-                }
-                it.msg == "added" -> {
-                    info("added with connection id `${it.id}`: $it")
-                }
-                it.msg == "result" && it.resultElement() != null -> {
-                    val tokenResult = it.resultElement()
-                    info("loginResponse with token `${tokenResult?.token}`: $tokenResult")
-                    connected = true
-                    client.sendGetSubscriptionRequest(GetSubscriptionRequest())
-                }
-                it.msg == "result" && it.resultArray() != null -> {
-                    val subs = it.resultArray()
-                    debug("subResponse: $subs")
-                    subs?.filter { subbedRooms.contains(it.rid).not() }?.forEach {
-                        client.sendSubscribeToRoom(SubscribeRequest(roomId = it.rid))
-                        subbedRooms.add(it.rid)
-                        debug("subbed to room ${it.rid}")
+            try {
+                when {
+                    it.msg == "ping" -> client.sendPong(Pong())
+                    it.server_id == "0" -> client.sendConnect(Connect())
+                    it.msg == "connected" -> {
+                        info("connected: $it")
+                        client.sendLogin(LoginRequest(params = listOf(Param(User(username), password))))
                     }
-                }
-                it.msg == "changed" && it.collection == "stream-room-messages" -> {
-                    debug("received message: ${it.fields}")
-                    debug("args: ${it.fields?.args}")
-                    it.fields?.args?.forEach {
-                        info("arg: $it")
-                        if (it.u.username != username) {
-                            backendToJamesChannel.send(IncomingPayload(it.rid, it.u.username, it.msg))
-                        } else {
-                            debug("ignoring msg from myself")
+                    it.msg == "added" -> {
+                        info("added with connection id `${it.id}`: $it")
+                    }
+                    it.msg == "result" && it.resultElement() != null -> {
+                        val tokenResult = it.resultElement()
+                        info("loginResponse with token `${tokenResult?.token}`: $tokenResult")
+                        connected = true
+                        client.sendGetSubscriptionRequest(GetSubscriptionRequest())
+                    }
+                    it.msg == "result" && it.resultArray() != null -> {
+                        val subs = it.resultArray()
+                        debug("subResponse: $subs")
+                        subs?.filter { subbedRooms.contains(it.rid).not() }?.forEach {
+                            client.sendSubscribeToRoom(SubscribeRequest(roomId = it.rid))
+                            subbedRooms.add(it.rid)
+                            debug("subbed to room ${it.rid}")
                         }
                     }
+                    it.msg == "changed" && it.collection == "stream-room-messages" -> {
+                        debug("received message: ${it.fields}")
+                        debug("args: ${it.fields?.args}")
+                        it.fields?.args?.forEach {
+                            info("arg: $it")
+                            if (it.u.username != username) {
+                                backendToJamesChannel.send(IncomingPayload(it.rid, it.u.username, it.msg))
+                            } else {
+                                debug("ignoring msg from myself")
+                            }
+                        }
+                    }
+                    it.msg == "changed" -> {
+                        debug("changed: $it")
+                    }
+                    it.msg == "updated" -> {
+                        debug("updated: $it")
+                    }
+                    it.msg == "ready" -> {
+                        debug("ready: $it")
+                    }
+                    else -> warn("unhandled and unsupported event: $it")
                 }
-                it.msg == "changed" -> {
-                    debug("changed: $it")
-                }
-                it.msg == "updated" -> {
-                    debug("updated: $it")
-                }
-                it.msg == "ready" -> {
-                    debug("ready: $it")
-                }
-                else -> warn("unhandled and unsupported event: $it")
+            } catch (e: Exception) {
+                warn("handleRocketchatApiEvents on message exception: ${e.singleLineLog()}")
             }
         }
     }
@@ -153,16 +161,20 @@ class RocketChatBackend(
 
     private suspend fun handleOutgoingMessages() {
         fromJamesToBackendChannel.consumeEach {
-            if (connected) {
-                client.sendMessage(
-                    SendMessageRequest(
-                        rid = it.target,
-                        messageText = it.text,
-                        emoji = it.options.getOrDefault("avatar", defaultAvatar)
+            try {
+                if (connected) {
+                    client.sendMessage(
+                        SendMessageRequest(
+                            rid = it.target,
+                            messageText = it.text,
+                            emoji = it.options.getOrDefault("avatar", defaultAvatar)
+                        )
                     )
-                )
-            } else {
-                error("not connected so won't send $it!")
+                } else {
+                    error("not connected so won't send $it!")
+                }
+            } catch (e: Exception) {
+                warn("handleOutgoingMessages received exception: ${e.singleLineLog()}")
             }
         }
     }
@@ -220,3 +232,5 @@ interface RocketChat {
     @Send
     fun sendMessage(request: SendMessageRequest)
 }
+
+fun Exception.singleLineLog() = "${javaClass.simpleName} - $message"
