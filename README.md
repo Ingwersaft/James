@@ -5,12 +5,13 @@
 # James
 Micro chat framework for Kotlin.
 
-Currently supports Rocket.Chat, Telegram and Slack as targets.
+Currently supports Rocket.Chat, Telegram, Slack and Discord as targets.
 
 ## Features
  * Rocket.Chat via Websocket api
  * Telegram
  * Slack using [Ullink/simple-slack-api](https://github.com/Ullink/simple-slack-api)
+ * Discord using [DV8FromTheWorld/JDA](https://github.com/DV8FromTheWorld/JDA)
  * minimal DSL
  * conversation support
  * automatic mapping overview aka `help`

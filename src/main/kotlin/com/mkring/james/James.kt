@@ -1,6 +1,7 @@
 package com.mkring.james
 
 import com.mkring.james.chatbackend.*
+import com.mkring.james.chatbackend.discord.DiscordBackend
 import com.mkring.james.chatbackend.rocketchat.RocketChatBackend
 import com.mkring.james.chatbackend.slack.SlackBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
@@ -90,6 +91,7 @@ class James(
                 )
                 is Telegram -> TelegramBackend(it.token, it.username)
                 is Slack -> SlackBackend(it.botOauthToken)
+                is Discord -> DiscordBackend(it.token)
             }
         }
     }
@@ -142,8 +144,18 @@ class James(
         chatConfigs += Telegram().also(init)
     }
 
+    /**
+     * create Slack config/chat
+     */
     fun slack(init: Slack.() -> Unit) {
         chatConfigs += Slack().also(init)
+    }
+
+    /**
+     * create Discord config/chat
+     */
+    fun discord(init: Discord.() -> Unit) {
+        chatConfigs += Discord().also(init)
     }
 
     /**
