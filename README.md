@@ -7,6 +7,10 @@ Micro chat framework for Kotlin.
 
 Currently supports Rocket.Chat, Telegram and Slack as targets.
 
+Regarding *compatibility*:
+
+**before 1.0.5**: kotlin 1.2 with old experimental coroutines
+**since 1.0.5**: kotlin 1.3 with new coroutines (structured concurrency)
 ## Features
  * Rocket.Chat via Websocket api
  * Telegram

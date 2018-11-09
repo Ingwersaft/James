@@ -144,7 +144,7 @@ release {
         signTag = false
     }
 }
-
+// *important*: actual bintrayRelease & bintrayUpload gradle tasks are called by the circle ci build job
 bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
