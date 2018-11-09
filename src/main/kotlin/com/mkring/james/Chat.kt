@@ -5,12 +5,15 @@ import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
-import kotlinx.coroutines.experimental.Job
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 
 class Chat(
     val type: String,
@@ -18,19 +21,23 @@ class Chat(
     val chatBackend: ChatBackend,
     val abortKeywords: MutableList<String>,
     val mappingprefix: String
-) {
+) : CoroutineScope {
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = job + JamesPool
+
     private val runningJobs = mutableMapOf<UniqueChatTarget, Job>()
     private val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
     suspend fun start() {
         log.info("start() called")
         log.info("received the following mappings:\n" + mappings.map { it.key }.joinToString("\n"))
         chatBackend.start()
-        log.info("Chat chat started, now iterating chatBackend")
-        fireAndForgetLoop("receive-from-backends") {
-            chatBackend.backendToJamesChannel.receive().let { (uniqueChatTarget, username, text) ->
+        log.info("Chat chat started, now iterating chatBackend channel")
+        launch {
+            chatBackend.backendToJamesChannel.consumeEach { (uniqueChatTarget, username, text) ->
                 log.info("chatBackend.backendToJamesChannel received $text from $username - $uniqueChatTarget")
                 if (callbackFutureHandled(text, uniqueChatTarget).not()) {
-                    mappings.map { it.key }.joinToString(";").let { println("chatLogicMappings keys =$it") }
+                    mappings.map { it.key }.joinToString(";").let { log.debug("chatLogicMappings keys =$it") }
 
                     mappings.entries.firstOrNull { text.startsWith(it.key) }?.let { entry ->
                         log.info("going to handle ${entry.key}")
@@ -41,7 +48,6 @@ class Chat(
                         }
                         log.info("launch done")
                         runningJobs[uniqueChatTarget] = job
-                        return@fireAndForgetLoop
                     }
                     log.trace("nothing found for $text from $uniqueChatTarget")
                 }
@@ -65,10 +71,8 @@ class Chat(
         return false
     }
 
-    fun send(outgoingPayload: OutgoingPayload) {
-        async(JamesPool) {
-            chatBackend.fromJamesToBackendChannel.send(outgoingPayload)
-        }.awaitBlocking()
+    fun send(outgoingPayload: OutgoingPayload) = runBlocking {
+        chatBackend.fromJamesToBackendChannel.send(outgoingPayload)
     }
 
     fun ask(

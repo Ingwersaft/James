@@ -6,9 +6,11 @@ import com.mkring.james.chatbackend.slack.SlackBackend
 import com.mkring.james.chatbackend.telegram.TelegramBackend
 import com.mkring.james.mapping.Mapping
 import com.mkring.james.mapping.MappingPattern
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import kotlin.coroutines.CoroutineContext
 
 @DslMarker
 annotation class LimitClosureScope
@@ -25,7 +27,11 @@ class James(
     var name: String? = null,
     var autoStart: Boolean = true,
     val abortKeywords: MutableList<String> = mutableListOf()
-) {
+) : CoroutineScope {
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = job + JamesPool
+
     internal val chatBackends: MutableList<ChatBackend> = mutableListOf()
     internal val chatConfigs: MutableList<ChatConfig> = mutableListOf()
 
@@ -44,9 +50,8 @@ class James(
     fun isStarted() = started
 
     private var started: Boolean = false
-    fun start(): James = async(JamesPool) {
+    fun start(): James {
         lg("start()")
-
         createChatBackends()
         val mappingprefix = when (name) {
             null -> ""
@@ -74,8 +79,8 @@ class James(
             }
         }
         started = true
-        return@async this@James
-    }.awaitBlocking()
+        return this
+    }
 
     private fun createChatBackends() {
         chatConfigs.map {

@@ -1,7 +1,7 @@
 group = 'com.github.Ingwersaft'
 
 buildscript {
-    ext.kotlin_version = '1.2.31'
+    ext.kotlin_version = '1.3.0'
     ext.dokka_version = '0.9.17'
 
     repositories {
@@ -50,8 +50,8 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.22.5'
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:0.22.5'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.0.0'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.0.0'
 
     compile 'org.slf4j:slf4j-api:1.7.25'
 
@@ -62,16 +62,15 @@ dependencies {
 
     compile "com.github.Ullink:simple-slack-api:1.2.0"
 
-    implementation 'com.github.tinder.scarlet:scarlet:0.1.3'
-    implementation 'com.github.tinder.scarlet:scarlet-message-adapter-gson:0.1.3'
-    implementation 'com.github.tinder.scarlet:scarlet-stream-adapter-coroutines:0.1.3'
-    implementation 'com.github.tinder.scarlet:scarlet-websocket-okhttp:0.1.3'
+    def scarlet_version = '0.1.6'
+    implementation "com.github.tinder.scarlet:scarlet:$scarlet_version"
+    implementation "com.github.tinder.scarlet:scarlet-message-adapter-gson:$scarlet_version"
+    implementation "com.github.tinder.scarlet:scarlet-stream-adapter-coroutines:$scarlet_version"
+    implementation "com.github.tinder.scarlet:scarlet-websocket-okhttp:$scarlet_version"
 
     compile "ch.qos.logback:logback-classic:1.2.3"
     testCompile 'junit:junit:4.12'
-
     testCompile "io.mockk:mockk:1.7.8"
-
 }
 
 compileKotlin {
@@ -143,11 +142,6 @@ release {
         pushToBranchPrefix = ''
         commitVersionFileOnly = false
         signTag = false
-    }
-}
-kotlin {
-    experimental {
-        coroutines "enable"
     }
 }
 

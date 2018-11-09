@@ -2,12 +2,13 @@ package com.mkring.james.mapping
 
 import com.mkring.james.Chat
 import com.mkring.james.JamesPool
-import com.mkring.james.awaitBlocking
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.lg
-import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 
 data class MappingPattern(val pattern: String, val info: String)
 
@@ -17,7 +18,11 @@ class Mapping(
     val username: String?,
     private val mappingprefix: String,
     private val parentChat: Chat
-) {
+) : CoroutineScope {
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = job + JamesPool
+
     /**
      * pattern will be present too, but not james name!
      *
@@ -58,9 +63,7 @@ class Mapping(
      * Send some text to the chat counterpart
      */
     fun send(text: String, options: Map<String, String> = emptyMap()) {
-        async(JamesPool) {
-            parentChat.send(OutgoingPayload(uniqueChatTarget, text, options))
-        }.awaitBlocking()
+        parentChat.send(OutgoingPayload(uniqueChatTarget, text, options))
     }
 
     /**
@@ -86,22 +89,22 @@ class Mapping(
         val firstOrNull = IntRange(0, retries).asSequence().map {
             ask(text, options)
         }.filter {
-                when (it) {
-                    is Ask.Timeout -> {
-                        send(timeoutText)
-                        false
-                    }
-                    is Ask.Answer -> {
-                        when (predicate(it.value)) {
-                            true -> true
-                            else -> {
-                                send(wrongAnswerText)
-                                false
-                            }
+            when (it) {
+                is Ask.Timeout -> {
+                    send(timeoutText)
+                    false
+                }
+                is Ask.Answer -> {
+                    when (predicate(it.value)) {
+                        true -> true
+                        else -> {
+                            send(wrongAnswerText)
+                            false
                         }
                     }
                 }
-            }.firstOrNull()
+            }
+        }.firstOrNull()
         return when (firstOrNull) {
             null -> {
                 send(askWithRetryFailedText)

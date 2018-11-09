@@ -1,10 +1,12 @@
 package com.mkring.james.chatbackend.telegram
 
+import com.mkring.james.JamesPool
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
-import com.mkring.james.fireAndForgetLoop
 import com.mkring.james.lg
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.TelegramBotsApi
@@ -12,25 +14,31 @@ import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.generics.BotSession
+import kotlin.coroutines.CoroutineContext
 
 private val log = LoggerFactory.getLogger(TelegramBackend::class.java)
+
 class TelegramBackend(val botToken: String, val botUsername: String) : ChatBackend() {
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = job + JamesPool
+
     private lateinit var session: BotSession
 
-    override suspend fun start() {
+    override fun start() {
         log.info("start()")
         session = TelegramBotsApi().registerBot(bot)
         // handle outgoing
-        fireAndForgetLoop("TelegramBackend-outgoing-receiver") {
-            val (target, text, options) = fromJamesToBackendChannel.receive()
-            bot.execute(SendMessage(target, text).apply {
-                options["parse_mode"]?.let {
-                    lg("SendMessage parse mode: $it")
-                    setParseMode(it)
-                }
-            })
+        launch {
+            fromJamesToBackendChannel.consumeEach { (target, text, options) ->
+                bot.execute(SendMessage(target, text).apply {
+                    options["parse_mode"]?.let {
+                        lg("SendMessage parse mode: $it")
+                        setParseMode(it)
+                    }
+                })
+            }
         }
-        log.info("starting up done")
     }
 
     private val bot: TelegramLongPollingBot by lazy {

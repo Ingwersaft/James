@@ -1,6 +1,7 @@
 package com.mkring.james.chatbackend
 
-import kotlinx.coroutines.experimental.channels.Channel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
 
 typealias UniqueChatTarget = String
 
@@ -25,8 +26,8 @@ data class OutgoingPayload(
 /**
  * TODO add info!
  */
-abstract class ChatBackend {
+abstract class ChatBackend : CoroutineScope {
     val backendToJamesChannel: Channel<IncomingPayload> = Channel(10)
     val fromJamesToBackendChannel: Channel<OutgoingPayload> = Channel(10)
-    abstract suspend fun start()
+    abstract fun start()
 }

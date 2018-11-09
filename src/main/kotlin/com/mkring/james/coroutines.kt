@@ -1,6 +1,8 @@
 package com.mkring.james
 
-import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ForkJoinPool
 
@@ -14,23 +16,6 @@ val JamesPool = newFixedThreadPoolContext(
 
 fun <T> Deferred<T>.awaitBlocking(): T = runBlocking {
     await()
-}
-
-private val fireAndForgetLoopLog = LoggerFactory.getLogger("fireAndForgetLoop")
-suspend fun fireAndForgetLoop(name: String, block: suspend CoroutineScope.() -> Unit) = launch(JamesPool) {
-    while (true) {
-        try {
-            block()
-        } catch (e: JobCancellationException) {
-            fireAndForgetLoopLog.warn("$name: received JobCancellationException, will cancel myself")
-            kotlin.coroutines.experimental.coroutineContext.cancel(e)
-        } catch (e: Exception) {
-            fireAndForgetLoopLog.error("catched exception in $name routing: ${e::class.java.simpleName}:${e.message}")
-        }
-        delay(10)
-    }
-}.also {
-    fireAndForgetLoopLog.info("launched $name")
 }
 
 fun Any.lg(toBeLogged: Any) {

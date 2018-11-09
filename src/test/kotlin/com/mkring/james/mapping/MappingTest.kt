@@ -1,6 +1,7 @@
 package com.mkring.james.mapping
 
 import com.mkring.james.James
+import com.mkring.james.JamesPool
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.chatbackend.OutgoingPayload
@@ -8,14 +9,12 @@ import com.mkring.james.chatbackend.UniqueChatTarget
 import com.mkring.james.james
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
-import kotlinx.coroutines.experimental.CompletableDeferred
-import kotlinx.coroutines.experimental.channels.consumeEach
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.consumeEach
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
 
 class MappingTest {
     val log = LoggerFactory.getLogger(MappingTest::class.java)
@@ -132,7 +131,6 @@ class MappingTest {
 
     }
 
-
     @Test
     fun testAskWithTimeout() = runBlocking {
         createHelloWorldTestJames {
@@ -202,24 +200,31 @@ class MappingTest {
             }
         }
     }
-
 }
 
 class TestBackend : ChatBackend() {
+    private val job = Job()
+    override val coroutineContext: CoroutineContext
+        get() = job + JamesPool
+
+    lateinit var receivedJob: Job
+
     var outgoing: MutableList<OutgoingPayload> = mutableListOf()
 
     suspend fun send(text: String, id: UniqueChatTarget = "don't care", user: String = "someone") {
         backendToJamesChannel.send(IncomingPayload(id, user, text))
     }
 
-    override suspend fun start() {
-        launch {
+    override fun start() {
+        println("TestBackend: launching")
+        receivedJob = launch {
             fromJamesToBackendChannel.consumeEach {
                 outgoing.add(it)
                 println("received on james-to-backend: $it")
                 delay(10)
             }
         }
+        println("TestBackend: started")
     }
 }
 
