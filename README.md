@@ -118,7 +118,8 @@ dependencies {
 ### Javadoc
 Jitpack also provides javadoc web publishing. Use the URL
 `https://jitpack.io/com/github/Ingwersaft/James/<VERSION>/javadoc/`
-(e.g.: [master-SNAPSHOT](https://jitpack.io/com/github/Ingwersaft/James/master-SNAPSHOT/javadoc/))
+(e.g.: [master-SNAPSHOT](https://jitpack.io/com/github/Ingwersaft/James/master-SNAPSHOT/javadoc/)
+or [1.0.5](https://jitpack.io/com/github/Ingwersaft/James/1.1.5/javadoc/))
 to access the javadoc for the given version.
 
 ## Build
