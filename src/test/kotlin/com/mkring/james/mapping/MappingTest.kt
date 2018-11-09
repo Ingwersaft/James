@@ -128,7 +128,6 @@ class MappingTest {
         testBackend.outgoing.joinToString(";") { it.text }.let {
             assertEquals("something?;incompatible answer!;something?;alright", it)
         }
-
     }
 
     @Test
@@ -203,7 +202,7 @@ class MappingTest {
 }
 
 class TestBackend : ChatBackend() {
-    private val job = Job()
+    override val job = Job()
     override val coroutineContext: CoroutineContext
         get() = job + JamesPool
 

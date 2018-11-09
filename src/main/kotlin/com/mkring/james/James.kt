@@ -130,7 +130,9 @@ class James(
 
     fun stop() {
         lg("stop()")
-        // TODO("support real stop")
+        this.actualChats.forEach { it.stop() }
+        this.chatBackends.forEach { it.stop() }
+        this.job.cancel()
     }
 
     /**

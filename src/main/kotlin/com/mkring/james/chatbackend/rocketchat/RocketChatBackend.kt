@@ -1,6 +1,5 @@
 package com.mkring.james.chatbackend.rocketchat
 
-import com.mkring.james.JamesPool
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.tinder.scarlet.Lifecycle
@@ -12,7 +11,6 @@ import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.scarlet.ws.Receive
 import com.tinder.scarlet.ws.Send
 import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
@@ -22,7 +20,6 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.coroutines.CoroutineContext
 
 class RocketChatBackend(
     private val webSocketTargetUrl: String,
@@ -32,10 +29,6 @@ class RocketChatBackend(
     private val ignoreInvalidCa: Boolean = false,
     private val defaultAvatar: String
 ) : ChatBackend(), Logger by LoggerFactory.getLogger(RocketChatBackend::class.java) {
-    private val job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + JamesPool
-
     private val clientLifecycleRegistry = LifecycleRegistry()
 
     private val client: RocketChat by lazy {
@@ -46,7 +39,7 @@ class RocketChatBackend(
     private val subbedRooms = mutableListOf<String>()
 
     private var connected = false
-    override  fun start() = runBlocking {
+    override fun start() = runBlocking {
         launch {
             info("launching `handleWebsocketClientEvents` coroutine")
             handleWebsocketClientEvents()

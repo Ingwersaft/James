@@ -1,10 +1,8 @@
 package com.mkring.james.chatbackend.telegram
 
-import com.mkring.james.JamesPool
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.lg
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -14,15 +12,10 @@ import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.generics.BotSession
-import kotlin.coroutines.CoroutineContext
 
 private val log = LoggerFactory.getLogger(TelegramBackend::class.java)
 
 class TelegramBackend(val botToken: String, val botUsername: String) : ChatBackend() {
-    private val job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + JamesPool
-
     private lateinit var session: BotSession
 
     override fun start() {
@@ -79,6 +72,11 @@ class TelegramBackend(val botToken: String, val botUsername: String) : ChatBacke
                 }
             }
         }
+    }
+
+    override fun stop() {
+        this.session.stop()
+        super.stop()
     }
 
     private fun cleanText(update: Update): String {

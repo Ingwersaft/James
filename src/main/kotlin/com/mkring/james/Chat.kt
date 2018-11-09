@@ -88,6 +88,10 @@ class Chat(
         return Ask.of { future.get(timeout.toLong(), timeunit) }
     }
 
+    fun stop() {
+        job.cancel()
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger("Chat")
     }
