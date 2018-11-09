@@ -9,6 +9,7 @@ import com.mkring.james.mapping.MappingPattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.CoroutineContext
 
@@ -45,6 +46,11 @@ class James(
     }
 
     /**
+     * if you want to block after calling james{} this is for you
+     */
+    var blockMain: Boolean = false
+
+    /**
      * check if james started
      */
     fun isStarted() = started
@@ -79,6 +85,11 @@ class James(
             }
         }
         started = true
+        if (blockMain) {
+            runBlocking {
+                job.join()
+            }
+        }
         return this
     }
 
