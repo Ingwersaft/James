@@ -11,7 +11,7 @@ import java.util.*
 
 private val gson = Gson()
 
-data class RocketResponse(
+internal data class RocketResponse(
     val server_id: String? = null,
 
     val msg: String? = null,
@@ -52,14 +52,14 @@ data class RocketResponse(
     }
 }
 
-data class Fields(
+internal data class Fields(
     val emails: List<Email>? = null,
     val username: String? = null,
     val eventName: String? = null,
     val args: List<Arg>? = null
 )
 
-data class Arg(
+internal data class Arg(
     val _id: String,
 
     val rid: String,
@@ -72,12 +72,12 @@ data class Arg(
     val _updatedAt: TokenExpires
 )
 
-data class Email(
+internal data class Email(
     val address: String,
     val verified: Boolean
 )
 
-data class ResultElement(
+internal data class ResultElement(
     val t: String,
     val ts: TokenExpires,
     val ls: TokenExpires,
@@ -97,18 +97,18 @@ data class ResultElement(
     val _id: String
 )
 
-data class TokenExpires(
+internal data class TokenExpires(
     val `$date`: Long
 )
 
-data class U(
+internal data class U(
     val _id: String,
 
     val username: String,
     val name: Any? = null
 )
 
-data class TokenResult(
+internal data class TokenResult(
     val id: String,
     val token: String,
     val tokenExpires: TokenExpires,
@@ -117,41 +117,40 @@ data class TokenResult(
 
 // james -> rocketchat
 
-
 private val rand = Random()
 
-data class Connect(
+internal data class Connect(
     private val msg: String = "connect",
     private val version: String = "1",
     private val support: List<String> = listOf("1")
 )
 
-data class Pong(
+internal data class Pong(
     private val msg: String = "pong"
 )
 
-data class LoginRequest(
+internal data class LoginRequest(
     val params: List<Param>
 ) : GenericRequest("method", "login")
 
-class GetSubscriptionRequest : GenericRequest("method", "subscriptions/get")
+internal class GetSubscriptionRequest : GenericRequest("method", "subscriptions/get")
 
-data class Param(
+internal data class Param(
     val user: User,
     val password: String
 )
 
-data class User(
+internal data class User(
     val username: String
 )
 
-open class GenericRequest(
+internal open class GenericRequest(
     private val msg: String,
     val method: String,
     val id: String = rand.nextInt(10_000).toString()
 )
 
-data class SubscribeRequest(
+internal data class SubscribeRequest(
     private val msg: String = "sub",
     private val name: String = "stream-room-messages",
     private val id: String = rand.nextInt(10_000).toString(),
@@ -160,7 +159,7 @@ data class SubscribeRequest(
     private val params: List<Any> = listOf(roomId, false)
 )
 
-data class SendMessageRequest(
+internal data class SendMessageRequest(
     @Expose(serialize = false)
     private val rid: String,
     @Expose(serialize = false)

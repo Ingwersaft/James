@@ -9,7 +9,10 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
-object NaiveSSLContext {
+/**
+ * ssl context ignoring cert paths
+ */
+internal object NaiveSSLContext {
 
     /**
      * Get an SSLContext that implements the specified secure
@@ -21,7 +24,6 @@ object NaiveSSLContext {
         return init(SSLContext.getInstance(protocol))
     }
 
-
     /**
      * Get an SSLContext that implements the specified secure
      * socket protocol and naively accepts all certificates
@@ -32,7 +34,6 @@ object NaiveSSLContext {
         return init(SSLContext.getInstance(protocol, provider))
     }
 
-
     /**
      * Get an SSLContext that implements the specified secure
      * socket protocol and naively accepts all certificates
@@ -42,7 +43,6 @@ object NaiveSSLContext {
     fun getInstance(protocol: String, provider: String): SSLContext {
         return init(SSLContext.getInstance(protocol, provider))
     }
-
 
     /**
      * Set NaiveTrustManager to the given context.
@@ -58,7 +58,7 @@ object NaiveSSLContext {
         return context
     }
 
-    object NaiveTrustManager : X509TrustManager {
+    internal object NaiveTrustManager : X509TrustManager {
         override fun checkClientTrusted(p0: Array<out X509Certificate>?, p1: String?) {
         }
 
@@ -68,6 +68,5 @@ object NaiveSSLContext {
         override fun getAcceptedIssuers(): Array<X509Certificate> {
             return emptyArray()
         }
-
     }
 }

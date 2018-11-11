@@ -28,7 +28,7 @@ class Chat(
 
     private val runningJobs = mutableMapOf<UniqueChatTarget, Job>()
     private val askResultMap: MutableMap<UniqueChatTarget, CompletableFuture<String>> = mutableMapOf()
-    suspend fun start() {
+    internal suspend fun start() {
         log.info("start() called")
         log.info("received the following mappings:\n" + mappings.map { it.key }.joinToString("\n"))
         chatBackend.start()
@@ -71,11 +71,11 @@ class Chat(
         return false
     }
 
-    fun send(outgoingPayload: OutgoingPayload) = runBlocking {
+    internal fun send(outgoingPayload: OutgoingPayload) = runBlocking {
         chatBackend.fromJamesToBackendChannel.send(outgoingPayload)
     }
 
-    fun ask(
+    internal fun ask(
         text: String,
         options: Map<String, String> = emptyMap(),
         timeout: Int,
@@ -88,7 +88,7 @@ class Chat(
         return Ask.of { future.get(timeout.toLong(), timeunit) }
     }
 
-    fun stop() {
+    internal fun stop() {
         job.cancel()
     }
 

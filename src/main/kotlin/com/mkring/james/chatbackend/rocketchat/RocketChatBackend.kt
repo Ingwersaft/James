@@ -206,7 +206,7 @@ class RocketChatBackend(
     }
 }
 
-interface RocketChat {
+internal interface RocketChat {
     @Receive // scarlet stream
     fun observeEvents(): Channel<WebSocket.Event>
 
