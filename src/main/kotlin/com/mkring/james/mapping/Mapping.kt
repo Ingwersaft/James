@@ -12,11 +12,17 @@ import kotlin.coroutines.CoroutineContext
 
 data class MappingPattern(val pattern: String, val info: String)
 
-class Mapping(
+/**
+ * use map dsl function inside james
+ */
+class Mapping internal constructor(
     private val commandText: String,
-    val uniqueChatTarget: UniqueChatTarget,
+    private val uniqueChatTarget: UniqueChatTarget,
+    /**
+     * if available the username will be provided
+     */
     val username: String?,
-    private val mappingprefix: String,
+    private val mappingPrefix: String,
     private val parentChat: Chat
 ) : CoroutineScope {
     private val job = Job()
@@ -31,7 +37,7 @@ class Mapping(
      */
     val arguments by lazy {
         lg("commandText=$commandText username=$username")
-        commandText.removePrefix(mappingprefix).trim().split(Regex("\\s+")).filterNot { it.isEmpty() }.toList()
+        commandText.removePrefix(mappingPrefix).trim().split(Regex("\\s+")).filterNot { it.isEmpty() }.toList()
     }
 
     /**

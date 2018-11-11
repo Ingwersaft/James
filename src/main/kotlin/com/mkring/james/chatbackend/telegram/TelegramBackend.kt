@@ -15,7 +15,8 @@ import org.telegram.telegrambots.generics.BotSession
 
 private val log = LoggerFactory.getLogger(TelegramBackend::class.java)
 
-class TelegramBackend(val botToken: String, val botUsername: String) : ChatBackend() {
+class TelegramBackend internal constructor(private val botToken: String, private val botUsername: String) :
+    ChatBackend() {
     private lateinit var session: BotSession
 
     override fun start() {

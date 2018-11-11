@@ -21,7 +21,10 @@ import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class RocketChatBackend(
+/**
+ * use rocketchat dsl function inside james
+ */
+class RocketChatBackend internal constructor(
     private val webSocketTargetUrl: String,
     private val username: String,
     private val password: String,

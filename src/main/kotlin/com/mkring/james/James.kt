@@ -23,8 +23,11 @@ fun james(init: James.() -> Unit): James = James().also(init).autoStart()
 
 private val log = LoggerFactory.getLogger(James::class.java)
 
+/**
+ * use james dsl function
+ */
 @LimitClosureScope
-class James(
+class James internal constructor(
     var name: String? = null,
     var autoStart: Boolean = true,
     val abortKeywords: MutableList<String> = mutableListOf()
@@ -56,8 +59,16 @@ class James(
     fun isStarted() = started
 
     private var started: Boolean = false
+
+    /**
+     * start james and wire chatbackends and mappings
+     */
     fun start(): James {
         lg("start()")
+        if (started) {
+            lg("already started")
+            return this
+        }
         createChatBackends()
         val mappingprefix = when (name) {
             null -> ""
@@ -128,6 +139,9 @@ class James(
         return Pair(helpCommand, mappingBlock)
     }
 
+    /**
+     * stop james and all children
+     */
     fun stop() {
         lg("stop()")
         this.actualChats.forEach { it.stop() }
@@ -160,6 +174,9 @@ class James(
         chatConfigs += Telegram().also(init)
     }
 
+    /**
+     * create Slack config/chat
+     */
     fun slack(init: Slack.() -> Unit) {
         chatConfigs += Slack().also(init)
     }

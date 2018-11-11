@@ -10,10 +10,13 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class SlackBackend(val botOauthToken: String) : ChatBackend(),
+/**
+ * use the dsl function inside james
+ */
+class SlackBackend internal constructor(private val botOauthToken: String) : ChatBackend(),
     Logger by LoggerFactory.getLogger(SlackBackend::class.java) {
 
-    lateinit var session: SlackSession
+    private lateinit var session: SlackSession
     override fun start() {
         info("staring slack session")
         session = SlackSessionFactory.createWebSocketSlackSession(botOauthToken)

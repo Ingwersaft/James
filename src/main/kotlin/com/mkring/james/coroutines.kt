@@ -1,11 +1,12 @@
 package com.mkring.james
 
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.newFixedThreadPoolContext
-import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ForkJoinPool
 
+/**
+ * threadpool dispatcher for james with at least 4 threads
+ */
 val JamesPool = newFixedThreadPoolContext(
     when {
         ForkJoinPool.getCommonPoolParallelism() < 4 -> 4
@@ -14,10 +15,9 @@ val JamesPool = newFixedThreadPoolContext(
     "JamesPool"
 )
 
-fun <T> Deferred<T>.awaitBlocking(): T = runBlocking {
-    await()
-}
-
+/**
+ * logging extension function
+ */
 fun Any.lg(toBeLogged: Any) {
     LoggerFactory.getLogger(this::class.java).apply {
         this.info(toBeLogged.toString())
