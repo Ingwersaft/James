@@ -49,7 +49,7 @@ jobs:
   rocketchat:
     docker:
       - image: circleci/openjdk:8-jdk
-      - image: rocketchat/rocket.chat:0.72.3
+      - image: rocketchat:0.71
     steps:
       - checkout
       - run: ./gradlew integrationTest
