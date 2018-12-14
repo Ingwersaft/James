@@ -8,7 +8,14 @@ class BasicRocketchatIntegration {
 
     @Test
     fun testConnectivity() {
-        val readText = URL("http://localhost:3000").readText()
-        assertTrue(readText.isNotEmpty())
+        println("### testConnectivity ###")
+        try {
+            val readText = URL("http://localhost:3000").readText()
+            assertTrue(readText.isNotEmpty())
+        } catch (e: Exception) {
+            println("e: ${e::class.simpleName}# ${e.message}")
+            e.printStackTrace()
+            throw e;
+        }
     }
 }
