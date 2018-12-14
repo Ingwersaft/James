@@ -107,8 +107,6 @@ integrationTest {
     testLogging {
         events "PASSED", "FAILED", "SKIPPED"
     }
-    useJUnitPlatform {
-    }
 }
 
 task sourceJar(type: Jar, dependsOn: classes) {
