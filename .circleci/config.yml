@@ -57,7 +57,9 @@ jobs:
           ROOT_URL: http://localhost:3000
     steps:
       - checkout
-      - run: ./gradlew integrationTest
+      - run: ./gradlew integrationTest --stacktrace --info
+      - store_artifacts:
+          path: build/reports/tests/integrationTest/
 workflows:
   version: 2
   all:
