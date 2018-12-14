@@ -80,6 +80,37 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
+sourceSets {
+    integrationTest {
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+    }
+    serviceTest {
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+    }
+}
+configurations {
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+
+    serviceTestCompile.extendsFrom testCompile
+    serviceTestRuntime.extendsFrom testRuntime
+}
+task integrationTest(type: Test) {
+    // Runs tests from src/serviceTest
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+integrationTest {
+    testLogging {
+        events "PASSED", "FAILED", "SKIPPED"
+    }
+    useJUnitPlatform {
+    }
+}
+
 task sourceJar(type: Jar, dependsOn: classes) {
     from 'src/main/kotlin/'
     classifier = 'sources'
