@@ -55,9 +55,11 @@ jobs:
       - image: rocket.chat:0.71.1
         environment:
           ROOT_URL: http://localhost:3000
+          ROCKETCHAT_USER: bot
+          ROCKETCHAT_PASSWORD: 1234
     steps:
       - checkout
-      - run: ./gradlew integrationTest --stacktrace --info
+      - run: ./gradlew integrationTest --stacktrace
       - store_artifacts:
           path: build/reports/tests/integrationTest/
 workflows:
