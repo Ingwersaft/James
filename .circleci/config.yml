@@ -51,6 +51,7 @@ jobs:
       - image: circleci/openjdk:8-jdk
       - image: mongo:3.0
         command: [--smallfiles]
+        name: db
       - image: rocket.chat:0.71.1
         environment:
           ROOT_URL: http://localhost:3000
