@@ -55,8 +55,9 @@ jobs:
       - image: rocket.chat:0.71.1
         environment:
           ROOT_URL: http://localhost:3000
-          ROCKETCHAT_USER: bot
-          ROCKETCHAT_PASSWORD: 1234
+          ADMIN_USERNAME: admin
+          ADMIN_PASS: 12345
+          ADMIN_EMAIL: admin@example.com
     steps:
       - checkout
       - run: ./gradlew integrationTest --stacktrace
