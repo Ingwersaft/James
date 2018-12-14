@@ -101,6 +101,7 @@ task integrationTest(type: Test) {
     // Runs tests from src/serviceTest
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
+    classpath += sourceSets.main.runtimeClasspath
 }
 
 integrationTest {
