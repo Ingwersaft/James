@@ -93,15 +93,13 @@ sourceSets {
 configurations {
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
-
-    serviceTestCompile.extendsFrom testCompile
-    serviceTestRuntime.extendsFrom testRuntime
 }
 task integrationTest(type: Test) {
     // Runs tests from src/serviceTest
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
     classpath += sourceSets.main.runtimeClasspath
+    classpath += sourceSets.main.compileClasspath
 }
 
 integrationTest {

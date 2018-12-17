@@ -39,11 +39,12 @@ class BasicRocketchatIntegration {
                 websocketTarget = "wss://$base/websocket"
             }
             map("complete", "") {
+                println("complete mapping block run!")
                 done.complete(Unit)
             }
         }
         println("james started! awaiting completion of future")
-        Thread.sleep(1000) // give james a second to connect -> added "connected"-flag to james
+        Thread.sleep(2000) // give james a second to connect -> added "connected"-flag to james
         // send complete command via api
         adminClient.postMessageToChannel("testjames complete").also { "sent message: $it" }
         // await completion
