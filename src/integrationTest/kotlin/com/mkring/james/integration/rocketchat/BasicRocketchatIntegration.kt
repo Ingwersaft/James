@@ -7,7 +7,6 @@ import java.net.URL
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-// private val base = "51.15.56.207:3000"
 private val base = "localhost:3000"
 
 // see .circleci/config.yml
@@ -44,13 +43,13 @@ class BasicRocketchatIntegration {
             }
         }
         println("james started! awaiting completion of future")
-        Thread.sleep(2000) // give james a second to connect -> added "connected"-flag to james
+        Thread.sleep(5000) // give james a second to connect -> added "connected"-flag to james
         // send complete command via api
         adminClient.postMessageToChannel("testjames complete").also { "sent message: $it" }
+        Thread.sleep(2000)
         // await completion
         done.get(1, TimeUnit.MINUTES)
         println("completed successfully!")
     }
 }
-
 //docker run --env ADMIN_USERNAME=admin --env ADMIN_PASS=12345 --env ADMIN_EMAIL=admin@example.com --name rocketchat --link db -d -p 3000:3000 rocket.chat:0.71.1
