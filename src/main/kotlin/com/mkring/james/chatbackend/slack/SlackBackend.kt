@@ -2,6 +2,7 @@ package com.mkring.james.chatbackend.slack
 
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
+import com.mkring.james.lw
 import com.ullink.slack.simpleslackapi.SlackSession
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
 import kotlinx.coroutines.channels.consumeEach
@@ -33,8 +34,12 @@ class SlackBackend internal constructor(private val botOauthToken: String) : Cha
 
         launch {
             fromJamesToBackendChannel.consumeEach { payload ->
-                session.findChannelById(payload.target).let {
-                    session.sendMessage(it, payload.text)
+                try {
+                    session.findChannelById(payload.target).let {
+                        session.sendMessage(it, payload.text)
+                    }
+                } catch (e: Exception) {
+                    lw("slack: outgoing message error (target='${payload.target}',text='${payload.text}'): ${e::class.java.simpleName} - ${e.message}")
                 }
             }
         }

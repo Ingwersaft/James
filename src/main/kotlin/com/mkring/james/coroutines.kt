@@ -24,6 +24,15 @@ fun Any.lg(toBeLogged: Any) {
     }
 }
 
+/**
+ * logging extension function: warn
+ */
+fun Any.lw(toBeLogged: Any) {
+    LoggerFactory.getLogger(this::class.java).apply {
+        this.warn(toBeLogged.toString())
+    }
+}
+
 internal infix fun String.isIn(abortKeywords: List<String>): Boolean {
     return abortKeywords.contains(this)
 }
