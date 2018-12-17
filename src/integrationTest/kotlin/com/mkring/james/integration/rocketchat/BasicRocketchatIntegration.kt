@@ -43,6 +43,7 @@ class BasicRocketchatIntegration {
             }
         }
         println("james started! awaiting completion of future")
+        Thread.sleep(1000) // give james a second to connect -> added "connected"-flag to james
         // send complete command via api
         adminClient.postMessageToChannel("testjames complete").also { "sent message: $it" }
         // await completion
