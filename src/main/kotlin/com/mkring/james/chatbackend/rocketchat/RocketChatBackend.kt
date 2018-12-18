@@ -10,13 +10,11 @@ import com.tinder.scarlet.messageadapter.gson.GsonMessageAdapter
 import com.tinder.scarlet.websocket.okhttp.newWebSocketFactory
 import com.tinder.scarlet.ws.Receive
 import com.tinder.scarlet.ws.Send
-import com.tinder.streamadapter.coroutines.CoroutinesStreamAdapterFactory
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -42,7 +40,7 @@ class RocketChatBackend internal constructor(
     private val subbedRooms = mutableListOf<String>()
 
     private var connected = false
-    override fun start() = runBlocking {
+    override fun start() {
         launch {
             info("launching `handleWebsocketClientEvents` coroutine")
             handleWebsocketClientEvents()
@@ -60,6 +58,7 @@ class RocketChatBackend internal constructor(
             refreshSubscriptions()
         }
         clientLifecycleRegistry.onNext(Lifecycle.State.Started)
+        debug("start() done")
     }
 
     private suspend fun refreshSubscriptions() {

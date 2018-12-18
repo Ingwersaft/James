@@ -3,6 +3,7 @@ package com.mkring.james
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.OutgoingPayload
 import com.mkring.james.chatbackend.UniqueChatTarget
+import com.mkring.james.chatbackend.rocketchat.singleLineLog
 import com.mkring.james.mapping.Ask
 import com.mkring.james.mapping.Mapping
 import kotlinx.coroutines.CoroutineScope
@@ -36,20 +37,24 @@ class Chat(
         launch {
             chatBackend.backendToJamesChannel.consumeEach { (uniqueChatTarget, username, text) ->
                 log.info("chatBackend.backendToJamesChannel received $text from $username - $uniqueChatTarget")
-                if (callbackFutureHandled(text, uniqueChatTarget).not()) {
-                    mappings.map { it.key }.joinToString(";").let { log.debug("chatLogicMappings keys =$it") }
+                try {
+                    if (callbackFutureHandled(text, uniqueChatTarget).not()) {
+                        mappings.map { it.key }.joinToString(";").let { log.debug("chatLogicMappings keys =$it") }
 
-                    mappings.entries.firstOrNull { text.startsWith(it.key) }?.let { entry ->
-                        log.info("going to handle ${entry.key}")
-                        val job = launch {
-                            Mapping(text, uniqueChatTarget, username, mappingprefix, this@Chat).apply {
-                                entry.value.invoke(this)
+                        mappings.entries.firstOrNull { text.startsWith(it.key) }?.let { entry ->
+                            log.info("going to handle ${entry.key}")
+                            val job = launch {
+                                Mapping(text, uniqueChatTarget, username, mappingprefix, this@Chat).apply {
+                                    entry.value.invoke(this)
+                                }
                             }
+                            log.info("launch done")
+                            runningJobs[uniqueChatTarget] = job
                         }
-                        log.info("launch done")
-                        runningJobs[uniqueChatTarget] = job
+                        log.trace("nothing found for $text from $uniqueChatTarget")
                     }
-                    log.trace("nothing found for $text from $uniqueChatTarget")
+                } catch (e: Exception) {
+                    log.warn("chatBackend.backendToJamesChannel.consumeEach threw exception: ${e.singleLineLog()}")
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.mkring.james.chatbackend.telegram
 import com.mkring.james.chatbackend.ChatBackend
 import com.mkring.james.chatbackend.IncomingPayload
 import com.mkring.james.lg
+import com.mkring.james.lw
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -25,12 +26,16 @@ class TelegramBackend internal constructor(private val botToken: String, private
         // handle outgoing
         launch {
             fromJamesToBackendChannel.consumeEach { (target, text, options) ->
-                bot.execute(SendMessage(target, text).apply {
-                    options["parse_mode"]?.let {
-                        lg("SendMessage parse mode: $it")
-                        setParseMode(it)
-                    }
-                })
+                try {
+                    bot.execute(SendMessage(target, text).apply {
+                        options["parse_mode"]?.let {
+                            lg("SendMessage parse mode: $it")
+                            setParseMode(it)
+                        }
+                    })
+                } catch (e: Exception) {
+                    lw("telegram: outgoing message error (target='$target',text='$text'): ${e::class.java.simpleName} - ${e.message}")
+                }
             }
         }
     }

@@ -23,9 +23,9 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "build.gradle" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
 
       - run: gradle dependencies
 
@@ -46,6 +46,23 @@ jobs:
 
       - run: bash <(curl -s https://codecov.io/bash)
 
+  rocketchat:
+    docker:
+      - image: circleci/openjdk:8-jdk
+      - image: mongo:3.0
+        command: [--smallfiles]
+        name: db
+      - image: rocket.chat:0.71.1
+        environment:
+          ROOT_URL: http://localhost:3000
+          ADMIN_USERNAME: admin
+          ADMIN_PASS: 12345
+          ADMIN_EMAIL: admin@example.com
+    steps:
+      - checkout
+      - run: ./gradlew test -Ditest=true --stacktrace
+      - store_artifacts:
+          path: build/reports/tests/integrationTest/
 workflows:
   version: 2
   all:
@@ -54,5 +71,5 @@ workflows:
           filters:
             tags:
               only: /[0-9]+\.[0-9]+\.[0-9]+/
-
+      - rocketchat
 
