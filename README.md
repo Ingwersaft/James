@@ -127,6 +127,11 @@ to access the javadoc for the given version.
 $ git clone https://github.com/Ingwersaft/James.git && cd James
 $ ./gradlew build
 ```
+## Release
+```
+// bintrayRelease & bintrayUpload are done using the circleci build
+$ ./gradlew release
+```
 
 ## Known caveats
  * James doesn't execute retries in case of backend connection problems
