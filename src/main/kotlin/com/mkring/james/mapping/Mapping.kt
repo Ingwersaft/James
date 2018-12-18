@@ -17,7 +17,10 @@ data class MappingPattern(val pattern: String, val info: String)
  */
 class Mapping internal constructor(
     private val commandText: String,
-    private val uniqueChatTarget: UniqueChatTarget,
+    /**
+     * uniq chat identifier; content depends on the used backend
+     */
+    val uniqueChatTarget: UniqueChatTarget,
     /**
      * if available the username will be provided
      */
