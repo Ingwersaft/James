@@ -1,0 +1,7 @@
+dependencies {
+    testCompile(project(":"))
+}
+test {
+    onlyIf { Boolean.getBoolean('itest') }
+}
+// call with ./gradlew build -Ditest=true

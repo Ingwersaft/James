@@ -60,7 +60,7 @@ jobs:
           ADMIN_EMAIL: admin@example.com
     steps:
       - checkout
-      - run: ./gradlew integrationTest --stacktrace
+      - run: ./gradlew test -Ditest=true --stacktrace
       - store_artifacts:
           path: build/reports/tests/integrationTest/
 workflows:

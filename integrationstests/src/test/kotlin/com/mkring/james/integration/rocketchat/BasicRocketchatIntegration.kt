@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 private val base = "localhost:3000"
+//private val base = "51.15.56.207:3000"
 
 // see .circleci/config.yml
 private val adminUser = "admin"
@@ -35,7 +36,7 @@ class BasicRocketchatIntegration {
                 sslVerifyHostname = false
                 username = botUser
                 password = botPw
-                websocketTarget = "wss://$base/websocket"
+                websocketTarget = "ws://$base/websocket"
             }
             map("complete", "") {
                 println("complete mapping block run!")
@@ -43,12 +44,13 @@ class BasicRocketchatIntegration {
             }
         }
         println("james started! awaiting completion of future")
+
         Thread.sleep(5000) // give james a second to connect -> added "connected"-flag to james
         // send complete command via api
         adminClient.postMessageToChannel("testjames complete").also { "sent message: $it" }
         Thread.sleep(2000)
         // await completion
-        done.get(1, TimeUnit.MINUTES)
+        done.get(10, TimeUnit.MINUTES)
         println("completed successfully!")
     }
 }
